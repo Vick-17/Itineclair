@@ -1,0 +1,76 @@
+# syntax=docker/dockerfile:1
+
+# -----------------------------------------------------------------------------
+# BUILD
+# -----------------------------------------------------------------------------
+
+FROM maven:3.9.16-eclipse-temurin-25 AS build
+
+WORKDIR /build
+
+# On copie d'abord uniquement les fichiers Maven.
+# Ainsi Docker peut réutiliser le cache des dépendances tant que le pom.xml
+# ne change pas.
+COPY api/.mvn/ .mvn/
+COPY api/mvnw api/pom.xml ./
+
+RUN chmod +x mvnw \
+    && ./mvnw -B -ntp dependency:go-offline
+
+# Le code change beaucoup plus souvent que les dépendances.
+COPY api/src/ src/
+
+# Les tests sont exécutés par la CI.
+# Ici l'objectif est uniquement de fabriquer l'artefact de production.
+RUN ./mvnw -B -ntp clean package -DskipTests
+
+# Spring Boot sait extraire son JAR en couches optimisées pour Docker.
+RUN set -eux; \
+    JAR_FILE="$(find target \
+        -maxdepth 1 \
+        -type f \
+        -name '*.jar' \
+        ! -name '*.original' \
+        -print \
+        -quit)"; \
+    test -n "${JAR_FILE}"; \
+    cp "${JAR_FILE}" application.jar; \
+    java -Djarmode=tools \
+        -jar application.jar \
+        extract \
+        --layers \
+        --destination extracted
+
+
+# -----------------------------------------------------------------------------
+# RUNTIME
+# -----------------------------------------------------------------------------
+
+FROM eclipse-temurin:25-jre-noble AS runtime
+
+# curl n'est utilisé que pour le healthcheck Docker.
+RUN apt-get update \
+    && apt-get install --no-install-recommends --yes curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --system --gid 10001 itineclair \
+    && useradd \
+        --system \
+        --uid 10001 \
+        --gid 10001 \
+        --no-create-home \
+        --shell /usr/sbin/nologin \
+        itineclair
+
+WORKDIR /application
+
+# Chaque COPY crée une couche Docker indépendante.
+COPY --from=build --chown=10001:10001 /build/extracted/dependencies/ ./
+COPY --from=build --chown=10001:10001 /build/extracted/spring-boot-loader/ ./
+COPY --from=build --chown=10001:10001 /build/extracted/snapshot-dependencies/ ./
+COPY --from=build --chown=10001:10001 /build/extracted/application/ ./
+
+USER 10001:10001
+
+EXPOSE 8080
+
+ENTRYPOINT ["java", "-jar", "application.jar"]
