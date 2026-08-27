@@ -1,0 +1,48 @@
+name: itineclair-dev
+
+services:
+  dev:
+    build:
+      context: .
+      dockerfile: .docker/Dockerfile.dev
+    init: true
+    working_dir: /workspace
+    command: sleep infinity
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-itineclair}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-itineclair}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-itineclair}
+      CHOKIDAR_USEPOLLING: "true"
+    volumes:
+      - .:/workspace
+      - maven-cache:/home/dev/.m2
+      - npm-cache:/home/dev/.npm
+      - web-node-modules:/workspace/web/node_modules
+    ports:
+      - "${API_PORT:-8080}:8080"
+      - "${WEB_PORT:-5173}:5173"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-itineclair}
+      POSTGRES_USER: ${POSTGRES_USER:-itineclair}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-itineclair}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  maven-cache:
+  npm-cache:
+  web-node-modules:
+  postgres-data:

@@ -1,0 +1,39 @@
+FROM node:24-bookworm-slim AS node
+
+FROM maven:3.9-eclipse-temurin-17
+
+ARG DEV_UID=1000
+ARG DEV_GID=1000
+
+COPY --from=node /usr/local/ /usr/local/
+
+RUN apt-get update \
+    && apt-get install --no-install-recommends --yes \
+        bash-completion \
+        build-essential \
+        ca-certificates \
+        curl \
+        git \
+        gosu \
+        jq \
+        less \
+        postgresql-client \
+        procps \
+        python3 \
+    && rm -rf /var/lib/apt/lists/* \
+    && existing_group="$(getent group "${DEV_GID}" | cut -d: -f1)" \
+    && if [ -n "${existing_group}" ]; then groupmod --new-name dev "${existing_group}"; else groupadd --gid "${DEV_GID}" dev; fi \
+    && existing_user="$(getent passwd "${DEV_UID}" | cut -d: -f1)" \
+    && if [ -n "${existing_user}" ]; then usermod --login dev --home /home/dev --move-home --shell /bin/bash "${existing_user}"; else useradd --create-home --uid "${DEV_UID}" --gid "${DEV_GID}" --shell /bin/bash dev; fi \
+    && mkdir -p /workspace /home/dev/.m2 /home/dev/.npm \
+    && chown -R dev:dev /workspace /home/dev
+
+COPY .docker/dev-entrypoint.sh /usr/local/bin/dev-entrypoint
+RUN chmod +x /usr/local/bin/dev-entrypoint
+
+ENV MAVEN_CONFIG=/home/dev/.m2 \
+    NPM_CONFIG_CACHE=/home/dev/.npm
+
+WORKDIR /workspace
+ENTRYPOINT ["dev-entrypoint"]
+CMD ["sleep", "infinity"]
