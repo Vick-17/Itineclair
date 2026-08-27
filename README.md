@@ -1,8 +1,9 @@
 # Itineclair
 
-L'environnement de développement complet fonctionne dans Docker : Java 17,
-Maven, Node.js 24, npm et PostgreSQL. Seuls Docker et Docker Compose sont requis
-sur la machine hôte.
+L'environnement de développement complet fonctionne dans Docker :
+Java 25, Maven, Node.js 24, npm et PostgreSQL 17 avec PostGIS 3.5.
+
+Seuls Docker et Docker Compose sont requis sur la machine hôte.
 
 ## Démarrer l'environnement
 
