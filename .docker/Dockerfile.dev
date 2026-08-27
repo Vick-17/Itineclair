@@ -1,6 +1,6 @@
 FROM node:24-bookworm-slim AS node
 
-FROM maven:3.9-eclipse-temurin-17
+FROM maven:3.9-eclipse-temurin-25
 
 ARG DEV_UID=1000
 ARG DEV_GID=1000
