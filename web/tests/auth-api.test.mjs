@@ -3,9 +3,11 @@ import { afterEach, test } from 'node:test'
 
 import {
   ApiError,
+  readCookie,
+} from '../src/api/api-client.ts'
+import {
   currentAccount,
   login,
-  readCookie,
 } from '../src/auth/auth-api.ts'
 
 const originalFetch = globalThis.fetch

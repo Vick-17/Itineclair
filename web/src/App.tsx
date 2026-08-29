@@ -7,13 +7,13 @@ import {
 
 import './App.css'
 import {
-  ApiError,
   currentAccount,
   login,
-  logout,
   register,
   type Account,
 } from './auth/auth-api'
+import { ApiError } from './api/api-client'
+import { TrackDashboard } from './track/TrackDashboard'
 
 type SessionState =
   | { status: 'loading' }
@@ -77,7 +77,7 @@ function App() {
         )}
 
         {session.status === 'authenticated' && (
-          <Dashboard
+          <TrackDashboard
             onLoggedOut={() => setSession({ status: 'guest' })}
           />
         )}
@@ -453,103 +453,6 @@ function FeatureIcon({ kind }: { kind: 'trace' | 'weather' | 'decision' }) {
         </svg>
       )}
     </span>
-  )
-}
-
-function Dashboard({
-  onLoggedOut,
-}: {
-  onLoggedOut: () => void
-}) {
-  const [pending, setPending] = useState(false)
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
-
-  async function handleLogout() {
-    setPending(true)
-    setErrorMessage(null)
-
-    try {
-      await logout()
-      onLoggedOut()
-    } catch (error: unknown) {
-      setErrorMessage(messageForError(error))
-      setPending(false)
-    }
-  }
-
-  return (
-    <div className="dashboard">
-      <section className="dashboard-heading">
-        <div>
-          <p className="eyebrow">
-            <span aria-hidden="true">●</span>
-            Espace personnel
-          </p>
-          <h1>Prêt pour la prochaine sortie ?</h1>
-          <p>
-            Ton compte est sécurisé. La prochaine étape sera d’importer une
-            trace GPX pour en extraire les premiers faits utiles.
-          </p>
-        </div>
-
-        <button
-          className="secondary-button"
-          type="button"
-          onClick={handleLogout}
-          disabled={pending}
-        >
-          {pending ? 'Déconnexion…' : 'Se déconnecter'}
-        </button>
-      </section>
-
-      {errorMessage && (
-        <div className="form-alert dashboard-alert" role="alert">
-          <span aria-hidden="true">!</span>
-          <p>{errorMessage}</p>
-        </div>
-      )}
-
-      <section className="empty-state" aria-labelledby="empty-title">
-        <div className="empty-map" aria-hidden="true">
-          <svg viewBox="0 0 240 180">
-            <path d="M9 145c28-52 48-31 71-79 20-41 44 47 67 4 21-38 42 3 84-46" />
-            <path d="M7 120c24-38 50-20 66-57 20-46 48 50 71 2 22-45 47 0 88-50" />
-            <circle cx="10" cy="145" r="5" />
-            <circle cx="231" cy="24" r="5" />
-          </svg>
-        </div>
-
-        <div className="empty-copy">
-          <span className="step-badge">Étape suivante</span>
-          <h2 id="empty-title">Importer une première trace GPX</h2>
-          <p>
-            Elle restera privée et servira à calculer distance, dénivelé,
-            altitude et pente avant toute analyse de contexte.
-          </p>
-          <button className="primary-button" type="button" disabled>
-            Import GPX en cours de construction
-          </button>
-        </div>
-      </section>
-
-      <section className="principles" aria-label="Principes de l’analyse">
-        <article>
-          <span>01</span>
-          <h2>Des faits avant l’avis</h2>
-          <p>Chaque résultat commence par les données observables de la trace.</p>
-        </article>
-        <article>
-          <span>02</span>
-          <h2>Une incertitude visible</h2>
-          <p>Les données manquantes ou fragiles seront signalées explicitement.</p>
-        </article>
-        <article>
-          <span>03</span>
-          <h2>Ta décision reste la tienne</h2>
-          <p>L’outil prépare des questions ; il ne donne jamais un feu vert.</p>
-        </article>
-      </section>
-    </div>
   )
 }
 
