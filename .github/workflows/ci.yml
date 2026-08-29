@@ -64,5 +64,8 @@ jobs:
       - name: Vérifier le code
         run: npm run lint
 
+      - name: Tester le client HTTP
+        run: npm test
+
       - name: Construire la PWA
         run: npm run build
