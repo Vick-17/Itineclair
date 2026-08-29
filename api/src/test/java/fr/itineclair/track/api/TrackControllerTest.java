@@ -15,6 +15,9 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockMultipartHttpServletRequestBuilder;
+
+import jakarta.servlet.http.Cookie;
 
 import fr.itineclair.identity.AccountPrincipal;
 import fr.itineclair.security.SecurityConfiguration;
@@ -28,7 +31,6 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -64,9 +66,8 @@ class TrackControllerTest {
                 any()))
                 .willReturn(imported);
 
-        mockMvc.perform(multipart("/tracks")
+        mockMvc.perform(multipartWithCsrf("/tracks")
                         .file(gpxFile())
-                        .with(csrf().asHeader())
                         .with(authentication(accountAuthentication())))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id")
@@ -99,9 +100,8 @@ class TrackControllerTest {
 
     @Test
     void rejectsImportWithoutAuthentication() throws Exception {
-        mockMvc.perform(multipart("/tracks")
-                        .file(gpxFile())
-                        .with(csrf().asHeader()))
+        mockMvc.perform(multipartWithCsrf("/tracks")
+                        .file(gpxFile()))
                 .andExpect(status().isUnauthorized());
 
         verifyNoInteractions(trackImportService);
@@ -125,15 +125,31 @@ class TrackControllerTest {
                 .willThrow(new InvalidGpxException(
                         "La trace GPX doit contenir au moins deux points."));
 
-        mockMvc.perform(multipart("/tracks")
+        mockMvc.perform(multipartWithCsrf("/tracks")
                         .file(gpxFile())
-                        .with(csrf().asHeader())
                         .with(authentication(accountAuthentication())))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.code")
                         .value("invalid_gpx"))
                 .andExpect(jsonPath("$.detail")
                         .value("La trace GPX doit contenir au moins deux points."));
+    }
+
+    private MockMultipartHttpServletRequestBuilder multipartWithCsrf(
+            String path) throws Exception {
+        Cookie csrfCookie = mockMvc.perform(get("/auth/csrf"))
+                .andExpect(status().isNoContent())
+                .andReturn()
+                .getResponse()
+                .getCookie("XSRF-TOKEN");
+
+        if (csrfCookie == null) {
+            throw new AssertionError("Missing XSRF-TOKEN test cookie.");
+        }
+
+        return multipart(path)
+                .cookie(csrfCookie)
+                .header("X-XSRF-TOKEN", csrfCookie.getValue());
     }
 
     private MockMultipartFile gpxFile() {
