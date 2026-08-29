@@ -6,6 +6,8 @@ import fr.itineclair.identity.AccountRole;
 import fr.itineclair.identity.EmailAlreadyUsedException;
 import fr.itineclair.identity.InvalidCredentialsException;
 import fr.itineclair.identity.RegisteredAccount;
+import fr.itineclair.security.LoginAttemptLimiter;
+import fr.itineclair.security.LoginRateLimitExceededException;
 import fr.itineclair.security.SecurityConfiguration;
 import fr.itineclair.security.SessionAuthenticationService;
 import org.junit.jupiter.api.Test;
@@ -14,6 +16,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -24,6 +27,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -36,12 +40,15 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -59,6 +66,9 @@ class AuthControllerTest {
 
     @MockitoBean
     private SessionAuthenticationService sessionAuthenticationService;
+
+    @MockitoBean
+    private LoginAttemptLimiter loginAttemptLimiter;
 
     @MockitoBean
     private UserDetailsService userDetailsService;
@@ -159,6 +169,12 @@ class AuthControllerTest {
     void logsInWithAValidAccount() throws Exception {
         UUID accountId = UUID.fromString("936dd470-a45c-46fa-a0bd-94a76e4b836a");
         AccountPrincipal principal = accountPrincipal(accountId, "victor@example.test");
+        LoginAttemptLimiter.Permit permit =
+                mock(LoginAttemptLimiter.Permit.class);
+        given(loginAttemptLimiter.beforeAuthentication(
+                eq("victor@example.test"),
+                any()))
+                .willReturn(permit);
         given(sessionAuthenticationService.authenticate(
                 eq("victor@example.test"), eq(PASSWORD), any(), any()))
                 .willReturn(principal);
@@ -175,10 +191,19 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.id").value(accountId.toString()))
                 .andExpect(jsonPath("$.email").value("victor@example.test"))
                 .andExpect(jsonPath("$.role").value("USER"));
+
+        verify(loginAttemptLimiter)
+                .authenticationSucceeded(permit);
     }
 
     @Test
     void returnsSameGenericErrorForInvalidCredentials() throws Exception {
+        LoginAttemptLimiter.Permit permit =
+                mock(LoginAttemptLimiter.Permit.class);
+        given(loginAttemptLimiter.beforeAuthentication(
+                eq("unknown@example.test"),
+                any()))
+                .willReturn(permit);
         given(sessionAuthenticationService.authenticate(
                 eq("unknown@example.test"), eq(PASSWORD), any(), any()))
                 .willThrow(new InvalidCredentialsException());
@@ -195,6 +220,68 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.code").value("invalid_credentials"))
                 .andExpect(content().string(not(containsString("unknown@example.test"))))
                 .andExpect(content().string(not(containsString(PASSWORD))));
+
+        verify(loginAttemptLimiter, never())
+                .authenticationSucceeded(permit);
+        verify(loginAttemptLimiter, never())
+                .authenticationUnavailable(permit);
+    }
+
+    @Test
+    void returnsRetryAfterWhenLoginIsRateLimited() throws Exception {
+        given(loginAttemptLimiter.beforeAuthentication(
+                eq("victor@example.test"),
+                any()))
+                .willThrow(new LoginRateLimitExceededException(
+                        Duration.ofSeconds(42)));
+
+        mockMvc.perform(postWithCsrf("/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "email": "victor@example.test",
+                          "password": "une phrase de passe de test suffisamment longue"
+                        }
+                        """))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(header().string("Retry-After", "42"))
+                .andExpect(jsonPath("$.code").value("login_rate_limited"))
+                .andExpect(content().string(not(containsString("victor@example.test"))))
+                .andExpect(content().string(not(containsString(PASSWORD))));
+
+        verifyNoInteractions(sessionAuthenticationService);
+    }
+
+    @Test
+    void releasesReservedIdentityAttemptsWhenAuthenticationIsUnavailable()
+            throws Exception {
+        LoginAttemptLimiter.Permit permit =
+                mock(LoginAttemptLimiter.Permit.class);
+        given(loginAttemptLimiter.beforeAuthentication(
+                eq("victor@example.test"),
+                any()))
+                .willReturn(permit);
+        given(sessionAuthenticationService.authenticate(
+                eq("victor@example.test"), eq(PASSWORD), any(), any()))
+                .willThrow(new AuthenticationServiceException(
+                        "Database unavailable"));
+
+        mockMvc.perform(postWithCsrf("/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "email": "victor@example.test",
+                          "password": "une phrase de passe de test suffisamment longue"
+                        }
+                        """))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.code")
+                        .value("authentication_unavailable"));
+
+        verify(loginAttemptLimiter)
+                .authenticationUnavailable(permit);
+        verify(loginAttemptLimiter, never())
+                .authenticationSucceeded(permit);
     }
 
     @Test

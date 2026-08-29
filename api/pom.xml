@@ -50,6 +50,12 @@
             <version>${password4j.version}</version>
         </dependency>
 
+        <!-- Cache mémoire borné pour la protection anti-brute-force -->
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+        </dependency>
+
         <!-- Persistance -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

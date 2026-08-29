@@ -2,6 +2,7 @@ package fr.itineclair.identity.api;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationServiceException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import fr.itineclair.identity.AccountPrincipal;
 import fr.itineclair.identity.AccountRegistrationService;
 import fr.itineclair.identity.RegisteredAccount;
+import fr.itineclair.security.LoginAttemptLimiter;
 import fr.itineclair.security.SessionAuthenticationService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -25,12 +27,15 @@ public class AuthController {
 
     private final AccountRegistrationService accountRegistrationService;
     private final SessionAuthenticationService sessionAuthenticationService;
+    private final LoginAttemptLimiter loginAttemptLimiter;
 
     public AuthController(
             AccountRegistrationService accountRegistrationService,
-            SessionAuthenticationService sessionAuthenticationService) {
+            SessionAuthenticationService sessionAuthenticationService,
+            LoginAttemptLimiter loginAttemptLimiter) {
         this.accountRegistrationService = accountRegistrationService;
         this.sessionAuthenticationService = sessionAuthenticationService;
+        this.loginAttemptLimiter = loginAttemptLimiter;
     }
 
     @GetMapping("/csrf")
@@ -53,9 +58,25 @@ public class AuthController {
             @Valid @RequestBody LoginRequest request,
             HttpServletRequest httpRequest,
             HttpServletResponse httpResponse) {
-        AccountPrincipal principal = sessionAuthenticationService.authenticate(
-                request.email(), request.password(), httpRequest, httpResponse);
-        return AuthenticatedAccountResponse.from(principal);
+        LoginAttemptLimiter.Permit permit =
+                loginAttemptLimiter.beforeAuthentication(
+                        request.email(),
+                        httpRequest);
+
+        try {
+            AccountPrincipal principal =
+                    sessionAuthenticationService.authenticate(
+                            request.email(),
+                            request.password(),
+                            httpRequest,
+                            httpResponse);
+
+            loginAttemptLimiter.authenticationSucceeded(permit);
+            return AuthenticatedAccountResponse.from(principal);
+        } catch (AuthenticationServiceException exception) {
+            loginAttemptLimiter.authenticationUnavailable(permit);
+            throw exception;
+        }
     }
 
     @GetMapping("/me")

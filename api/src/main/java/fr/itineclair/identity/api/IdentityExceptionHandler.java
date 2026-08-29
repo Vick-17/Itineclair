@@ -2,6 +2,8 @@ package fr.itineclair.identity.api;
 
 import fr.itineclair.identity.EmailAlreadyUsedException;
 import fr.itineclair.identity.InvalidCredentialsException;
+import fr.itineclair.security.LoginRateLimitExceededException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +17,23 @@ import java.util.Objects;
 
 @RestControllerAdvice
 public class IdentityExceptionHandler {
+
+    @ExceptionHandler(LoginRateLimitExceededException.class)
+    public ResponseEntity<ProblemDetail> handleLoginRateLimit(
+            LoginRateLimitExceededException exception) {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                HttpStatus.TOO_MANY_REQUESTS,
+                "Trop de tentatives de connexion. Réessaie plus tard.");
+        problem.setTitle("Connexion temporairement limitée");
+        problem.setProperty("code", "login_rate_limited");
+
+        return ResponseEntity
+                .status(HttpStatus.TOO_MANY_REQUESTS)
+                .header(
+                        HttpHeaders.RETRY_AFTER,
+                        Long.toString(exception.retryAfterSeconds()))
+                .body(problem);
+    }
 
     @ExceptionHandler(InvalidCredentialsException.class)
     public ResponseEntity<ProblemDetail> handleInvalidCredentials() {
