@@ -20,7 +20,11 @@ import org.springframework.test.web.servlet.request.MockMultipartHttpServletRequ
 import jakarta.servlet.http.Cookie;
 
 import fr.itineclair.identity.AccountPrincipal;
+import fr.itineclair.identity.AccountRegistrationService;
+import fr.itineclair.identity.api.AuthController;
+import fr.itineclair.security.LoginAttemptLimiter;
 import fr.itineclair.security.SecurityConfiguration;
+import fr.itineclair.security.SessionAuthenticationService;
 import fr.itineclair.track.InvalidGpxException;
 import fr.itineclair.track.TrackImportService;
 import fr.itineclair.track.TrackSummary;
@@ -36,7 +40,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(TrackController.class)
+@WebMvcTest(controllers = {
+        TrackController.class,
+        AuthController.class
+})
 @Import({
         SecurityConfiguration.class,
         TrackExceptionHandler.class
@@ -54,6 +61,15 @@ class TrackControllerTest {
 
     @MockitoBean
     private TrackImportService trackImportService;
+
+    @MockitoBean
+    private AccountRegistrationService accountRegistrationService;
+
+    @MockitoBean
+    private SessionAuthenticationService sessionAuthenticationService;
+
+    @MockitoBean
+    private LoginAttemptLimiter loginAttemptLimiter;
 
     @MockitoBean
     private UserDetailsService userDetailsService;
