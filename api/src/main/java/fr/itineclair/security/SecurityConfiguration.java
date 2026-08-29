@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -41,6 +42,7 @@ import com.password4j.types.Argon2;
 import jakarta.servlet.DispatcherType;
 
 @Configuration(proxyBeanMethods = false)
+@EnableConfigurationProperties(LoginProtectionProperties.class)
 public class SecurityConfiguration {
 
     private static final String PASSWORD_ENCODING_ID = "argon2id";
