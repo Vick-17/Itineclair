@@ -2,6 +2,7 @@ package fr.itineclair.identity.api;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -10,8 +11,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import fr.itineclair.identity.AccountPrincipal;
 import fr.itineclair.identity.AccountRegistrationService;
 import fr.itineclair.identity.RegisteredAccount;
+import fr.itineclair.security.SessionAuthenticationService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 
 @RestController
@@ -19,9 +24,13 @@ import jakarta.validation.Valid;
 public class AuthController {
 
     private final AccountRegistrationService accountRegistrationService;
+    private final SessionAuthenticationService sessionAuthenticationService;
 
-    public AuthController(AccountRegistrationService accountRegistrationService) {
+    public AuthController(
+            AccountRegistrationService accountRegistrationService,
+            SessionAuthenticationService sessionAuthenticationService) {
         this.accountRegistrationService = accountRegistrationService;
+        this.sessionAuthenticationService = sessionAuthenticationService;
     }
 
     @GetMapping("/csrf")
@@ -31,8 +40,27 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<RegisteredAccountResponse> register(@Valid @RequestBody RegisterAccountRequest request) {
-        RegisteredAccount account = accountRegistrationService.register(request.email(), request.password());
-        return ResponseEntity.status(HttpStatus.CREATED).body(RegisteredAccountResponse.from(account));
+    public ResponseEntity<RegisteredAccountResponse> register(
+            @Valid @RequestBody RegisterAccountRequest request) {
+        RegisteredAccount account = accountRegistrationService.register(
+                request.email(), request.password());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(RegisteredAccountResponse.from(account));
+    }
+
+    @PostMapping("/login")
+    public AuthenticatedAccountResponse login(
+            @Valid @RequestBody LoginRequest request,
+            HttpServletRequest httpRequest,
+            HttpServletResponse httpResponse) {
+        AccountPrincipal principal = sessionAuthenticationService.authenticate(
+                request.email(), request.password(), httpRequest, httpResponse);
+        return AuthenticatedAccountResponse.from(principal);
+    }
+
+    @GetMapping("/me")
+    public AuthenticatedAccountResponse currentAccount(
+            @AuthenticationPrincipal AccountPrincipal principal) {
+        return AuthenticatedAccountResponse.from(principal);
     }
 }
