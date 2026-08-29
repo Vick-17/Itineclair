@@ -1,18 +1,40 @@
 package fr.itineclair.identity.api;
 
 import fr.itineclair.identity.EmailAlreadyUsedException;
+import fr.itineclair.identity.InvalidCredentialsException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.security.authentication.AuthenticationServiceException;
 
 import java.util.Comparator;
 import java.util.Objects;
 
 @RestControllerAdvice
 public class IdentityExceptionHandler {
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<ProblemDetail> handleInvalidCredentials() {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                HttpStatus.UNAUTHORIZED,
+                "L’adresse e-mail ou le mot de passe est incorrect.");
+        problem.setTitle("Connexion impossible");
+        problem.setProperty("code", "invalid_credentials");
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(problem);
+    }
+
+    @ExceptionHandler(AuthenticationServiceException.class)
+    public ResponseEntity<ProblemDetail> handleAuthenticationUnavailable() {
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                "La connexion est temporairement indisponible.");
+        problem.setTitle("Service de connexion indisponible");
+        problem.setProperty("code", "authentication_unavailable");
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(problem);
+    }
 
     @ExceptionHandler(EmailAlreadyUsedException.class)
     public ResponseEntity<ProblemDetail> handleEmailAlreadyUsed() {
