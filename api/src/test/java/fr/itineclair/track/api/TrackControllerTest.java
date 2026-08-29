@@ -29,8 +29,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.security.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.security.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -67,7 +67,7 @@ class TrackControllerTest {
         mockMvc.perform(multipart("/tracks")
                         .file(gpxFile())
                         .with(csrf().asHeader())
-                        .with(authentication(authentication())))
+                        .with(authentication(accountAuthentication())))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id")
                         .value(TRACK_ID.toString()))
@@ -89,7 +89,7 @@ class TrackControllerTest {
                 .willReturn(List.of(summary()));
 
         mockMvc.perform(get("/tracks")
-                        .with(authentication(authentication())))
+                        .with(authentication(accountAuthentication())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id")
                         .value(TRACK_ID.toString()))
@@ -111,7 +111,7 @@ class TrackControllerTest {
     void rejectsImportWithoutCsrfToken() throws Exception {
         mockMvc.perform(multipart("/tracks")
                         .file(gpxFile())
-                        .with(authentication(authentication())))
+                        .with(authentication(accountAuthentication())))
                 .andExpect(status().isForbidden());
 
         verifyNoInteractions(trackImportService);
@@ -128,7 +128,7 @@ class TrackControllerTest {
         mockMvc.perform(multipart("/tracks")
                         .file(gpxFile())
                         .with(csrf().asHeader())
-                        .with(authentication(authentication())))
+                        .with(authentication(accountAuthentication())))
                 .andExpect(status().isUnprocessableContent())
                 .andExpect(jsonPath("$.code")
                         .value("invalid_gpx"))
@@ -155,7 +155,7 @@ class TrackControllerTest {
                 Instant.parse("2026-08-29T12:00:00Z"));
     }
 
-    private Authentication authentication() {
+    private Authentication accountAuthentication() {
         AccountPrincipal principal = mock(AccountPrincipal.class);
         given(principal.id()).willReturn(ACCOUNT_ID);
 

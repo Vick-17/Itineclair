@@ -2,7 +2,7 @@ import {
   ApiError,
   getJson,
   postJson,
-} from '../api/api-client'
+} from '../api/api-client.ts'
 
 export type Account = {
   id: string

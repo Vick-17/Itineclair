@@ -1,7 +1,7 @@
 import {
   getJson,
   postForm,
-} from '../api/api-client'
+} from '../api/api-client.ts'
 
 export type Track = {
   id: string
