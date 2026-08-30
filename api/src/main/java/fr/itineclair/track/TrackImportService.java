@@ -127,6 +127,24 @@ public class TrackImportService {
                 .toList();
     }
 
+    @Transactional
+    public TrackSummary getTrack(
+            UUID ownerId,
+            UUID trackId) {
+        Objects.requireNonNull(ownerId, "ownerId");
+        Objects.requireNonNull(trackId, "trackId");
+
+        Track track = trackRepository
+                .findByIdAndOwnerId(trackId, ownerId)
+                .orElseThrow(TrackNotFoundException::new);
+
+        if (track.needsFactsRefresh()) {
+            refreshFacts(track);
+        }
+
+        return TrackSummary.from(track);
+    }
+
     private void refreshFacts(Track track) {
         TrackFacts facts = trackFactsCalculator.calculate(
                 loadPoints(track.id()));

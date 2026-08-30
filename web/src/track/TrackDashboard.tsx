@@ -9,11 +9,19 @@ import {
 
 import { ApiError } from '../api/api-client'
 import { logout } from '../auth/auth-api'
+import { TrackReport } from './TrackReport'
 import {
+  formatCoverage,
+  formatDistance,
+  formatElevationRange,
+  formatMaximumGrades,
+  formatMeters,
+} from './track-format'
+import {
+  getTrack,
   importTrack,
   listTracks,
   type Track,
-  type TrackFacts,
 } from './tracks-api'
 
 const MAXIMUM_FILE_SIZE_BYTES = 10 * 1024 * 1024
@@ -26,6 +34,8 @@ export function TrackDashboard({
   const inputId = useId()
   const inputRef = useRef<HTMLInputElement>(null)
   const [tracks, setTracks] = useState<Track[]>([])
+  const [reportTrack, setReportTrack] = useState<Track | null>(null)
+  const [openingTrackId, setOpeningTrackId] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [loadingTracks, setLoadingTracks] = useState(true)
   const [uploading, setUploading] = useState(false)
@@ -148,10 +158,38 @@ export function TrackDashboard({
     }
   }
 
+  async function handleOpenReport(trackId: string) {
+    setOpeningTrackId(trackId)
+    setErrorMessage(null)
+
+    try {
+      const detailedTrack = await getTrack(trackId)
+      setReportTrack(detailedTrack)
+    } catch (error: unknown) {
+      if (error instanceof ApiError && error.status === 401) {
+        onLoggedOut()
+        return
+      }
+
+      setErrorMessage(messageForError(error))
+    } finally {
+      setOpeningTrackId(null)
+    }
+  }
+
   function resetInput() {
     if (inputRef.current) {
       inputRef.current.value = ''
     }
+  }
+
+  if (reportTrack) {
+    return (
+      <TrackReport
+        track={reportTrack}
+        onBack={() => setReportTrack(null)}
+      />
+    )
   }
 
   return (
@@ -329,6 +367,18 @@ export function TrackDashboard({
                       <span>Les points seront analysés à la prochaine consultation.</span>
                     </div>
                   )}
+                  <button
+                    className="track-report-button"
+                    type="button"
+                    onClick={() => handleOpenReport(track.id)}
+                    disabled={openingTrackId !== null}
+                    aria-label={`Ouvrir le rapport de ${track.name}`}
+                  >
+                    {openingTrackId === track.id
+                      ? 'Ouverture…'
+                      : 'Ouvrir le rapport'}
+                    <span aria-hidden="true">→</span>
+                  </button>
                 </article>
               </li>
             ))}
@@ -376,73 +426,6 @@ function formatDate(value: string): string {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(date)
-}
-
-function formatDistance(meters: number): string {
-  if (meters < 1_000) {
-    return `${Math.round(meters).toLocaleString('fr-FR')} m`
-  }
-
-  return `${(meters / 1_000).toLocaleString('fr-FR', {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
-  })} km`
-}
-
-function formatMeters(meters: number | null): string {
-  if (meters === null) {
-    return '—'
-  }
-
-  return `${Math.round(meters).toLocaleString('fr-FR')} m`
-}
-
-function formatElevationRange(facts: TrackFacts): string {
-  if (
-    facts.minimumElevationMeters === null
-    || facts.maximumElevationMeters === null
-  ) {
-    return '—'
-  }
-
-  return `${Math.round(facts.minimumElevationMeters).toLocaleString('fr-FR')}–${Math.round(facts.maximumElevationMeters).toLocaleString('fr-FR')} m`
-}
-
-function formatMaximumGrades(facts: TrackFacts): string {
-  const grades: string[] = []
-
-  if (facts.maximumUphillGradePercent !== null) {
-    grades.push(
-      `+${facts.maximumUphillGradePercent.toLocaleString('fr-FR', {
-        maximumFractionDigits: 1,
-      })} %`,
-    )
-  }
-
-  if (facts.maximumDownhillGradePercent !== null) {
-    grades.push(
-      `−${facts.maximumDownhillGradePercent.toLocaleString('fr-FR', {
-        maximumFractionDigits: 1,
-      })} %`,
-    )
-  }
-
-  return grades.length > 0 ? grades.join(' / ') : '—'
-}
-
-function formatCoverage(track: Track): string {
-  const points = `${track.pointCount.toLocaleString('fr-FR')} points`
-  const segments = `${track.segmentCount} segment${track.segmentCount > 1 ? 's' : ''}`
-
-  if (track.elevationPointCount === 0) {
-    return `Sans altitude · ${points} · ${segments}`
-  }
-
-  if (track.elevationComplete) {
-    return `Altitude complète · ${points} · ${segments}`
-  }
-
-  return `Altitude partielle ${track.elevationPointCount.toLocaleString('fr-FR')}/${track.pointCount.toLocaleString('fr-FR')} · ${segments}`
 }
 
 function messageForError(error: unknown): string {
