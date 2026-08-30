@@ -4,6 +4,7 @@ import { afterEach, test } from 'node:test'
 import {
   getOutdoorContext,
   getTrack,
+  getTrackAnalysis,
   importTrack,
   listTracks,
   saveOutdoorContext,
@@ -54,6 +55,38 @@ test('getTrack requests a private report by identifier', async () => {
   )
 
   assert.equal(track.name, 'Tour du lac')
+})
+
+test('getTrackAnalysis requests the owner-scoped rule report', async () => {
+  globalThis.fetch = async (url, options) => {
+    assert.equal(
+      url,
+      '/api/tracks/ce7b58c7-d6f4-4a26-8bad-68265bdb7bbf/analysis',
+    )
+    assert.equal(options.credentials, 'include')
+    assert.equal(options.method, 'GET')
+
+    return Response.json({
+      ruleSetVersion: 1,
+      reviewStatus: 'PROTOTYPE_AWAITING_EXPERT_REVIEW',
+      generatedAt: '2026-08-30T12:00:00Z',
+      sourceSnapshot: {
+        factsVersion: 1,
+        outdoorContextUpdatedAt: null,
+        weatherCheckedAt: null,
+      },
+      findings: [],
+      checklist: [],
+      limitations: [],
+    })
+  }
+
+  const analysis = await getTrackAnalysis(
+    'ce7b58c7-d6f4-4a26-8bad-68265bdb7bbf',
+  )
+
+  assert.equal(analysis.ruleSetVersion, 1)
+  assert.deepEqual(analysis.findings, [])
 })
 
 test('getOutdoorContext keeps an unplanned response explicit', async () => {

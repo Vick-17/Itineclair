@@ -100,12 +100,80 @@ export type SaveOutdoorContext = {
   shareStartPointWithWeatherProvider: boolean
 }
 
+export type AnalysisCategory =
+  | 'DATA_QUALITY'
+  | 'PHYSICAL_LOAD'
+  | 'ROUTE_CHARACTERISTICS'
+  | 'LIGHT'
+  | 'WEATHER'
+
+export type AnalysisSeverity =
+  | 'NOTICE'
+  | 'CAUTION'
+  | 'STRONG_CAUTION'
+
+export type EvidenceComparison =
+  | 'GREATER_THAN'
+  | 'GREATER_OR_EQUAL'
+  | 'LESS_THAN'
+  | 'LESS_OR_EQUAL'
+
+export type AnalysisEvidence = {
+  metric: string
+  label: string
+  observedValue: number
+  unit: string
+  comparison: EvidenceComparison
+  thresholdValue: number
+}
+
+export type AnalysisFinding = {
+  code: string
+  category: AnalysisCategory
+  severity: AnalysisSeverity
+  title: string
+  explanation: string
+  action: string
+  evidence: AnalysisEvidence[]
+}
+
+export type ChecklistStatus = 'AVAILABLE' | 'PARTIAL' | 'TO_VERIFY'
+
+export type AnalysisChecklistItem = {
+  code: string
+  status: ChecklistStatus
+  title: string
+  detail: string
+}
+
+export type TrackAnalysis = {
+  ruleSetVersion: number
+  reviewStatus: 'PROTOTYPE_AWAITING_EXPERT_REVIEW'
+  generatedAt: string
+  sourceSnapshot: {
+    factsVersion: number | null
+    outdoorContextUpdatedAt: string | null
+    weatherCheckedAt: string | null
+  }
+  findings: AnalysisFinding[]
+  checklist: AnalysisChecklistItem[]
+  limitations: string[]
+}
+
 export async function listTracks(): Promise<Track[]> {
   return getJson<Track[]>('/tracks')
 }
 
 export async function getTrack(trackId: string): Promise<Track> {
   return getJson<Track>(`/tracks/${encodeURIComponent(trackId)}`)
+}
+
+export async function getTrackAnalysis(
+  trackId: string,
+): Promise<TrackAnalysis> {
+  return getJson<TrackAnalysis>(
+    `/tracks/${encodeURIComponent(trackId)}/analysis`,
+  )
 }
 
 export async function importTrack(file: File): Promise<Track> {
