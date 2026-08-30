@@ -4,6 +4,7 @@ import {
 } from 'react'
 
 import { ApiError } from '../api/api-client'
+import { TrackAnalysisPanel } from './TrackAnalysisPanel'
 import {
   formatCoverage,
   formatDistance,
@@ -12,22 +13,28 @@ import {
   formatMeters,
 } from './track-format'
 import {
+  getTrackAnalysis,
   saveOutdoorContext,
   type OutdoorContext,
   type Track,
+  type TrackAnalysis,
   type WeatherContext,
 } from './tracks-api'
 
 export function TrackReport({
   track,
   outdoorContext,
+  analysis,
   onOutdoorContextChange,
+  onAnalysisChange,
   onUnauthorized,
   onBack,
 }: {
   track: Track
   outdoorContext: OutdoorContext | null
+  analysis: TrackAnalysis
   onOutdoorContextChange: (context: OutdoorContext) => void
+  onAnalysisChange: (analysis: TrackAnalysis) => void
   onUnauthorized: () => void
   onBack: () => void
 }) {
@@ -64,11 +71,25 @@ export function TrackReport({
       })
 
       onOutdoorContextChange(saved)
-      setContextSuccess(
+      const savedMessage =
         weatherConsent
           ? 'Horaire enregistré et prévision météo actualisée.'
-          : 'Horaire enregistré. Aucun point GPS n’a été transmis.',
-      )
+          : 'Horaire enregistré. Aucun point GPS n’a été transmis.'
+
+      try {
+        const refreshedAnalysis = await getTrackAnalysis(track.id)
+        onAnalysisChange(refreshedAnalysis)
+        setContextSuccess(savedMessage)
+      } catch (analysisError: unknown) {
+        if (analysisError instanceof ApiError && analysisError.status === 401) {
+          onUnauthorized()
+          return
+        }
+
+        setContextSuccess(
+          `${savedMessage} Recharge le rapport pour actualiser les règles.`,
+        )
+      }
     } catch (error: unknown) {
       if (error instanceof ApiError && error.status === 401) {
         onUnauthorized()
@@ -88,7 +109,7 @@ export function TrackReport({
           <span aria-hidden="true">←</span>
           Mes traces
         </button>
-        <span>Rapport factuel · version 2</span>
+        <span>Rapport explicable · version 3</span>
       </nav>
 
       <header className="report-heading">
@@ -263,64 +284,7 @@ export function TrackReport({
         )}
       </section>
 
-      <div className="report-columns">
-        <section className="report-panel">
-          <p className="auth-kicker">Ce que nous savons</p>
-          <h2>Qualité des données de la trace</h2>
-          <ul className="report-fact-list">
-            <ReportFact
-              status="known"
-              title="Structure GPX vérifiée"
-              detail={`${track.pointCount.toLocaleString('fr-FR')} points répartis dans ${track.segmentCount} segment${track.segmentCount > 1 ? 's' : ''}.`}
-            />
-            <ReportFact
-              status={track.elevationComplete ? 'known' : 'attention'}
-              title={track.elevationComplete ? 'Altitude complète' : 'Altitude incomplète'}
-              detail={
-                track.elevationComplete
-                  ? 'Chaque point contient une altitude.'
-                  : `${track.elevationPointCount.toLocaleString('fr-FR')} points sur ${track.pointCount.toLocaleString('fr-FR')} contiennent une altitude ; D+ et D− sont donc partiels.`
-              }
-            />
-            <ReportFact
-              status="known"
-              title="Ruptures de segment respectées"
-              detail="Aucune distance ni pente n’est inventée entre deux segments."
-            />
-          </ul>
-        </section>
-
-        <section className="report-panel">
-          <p className="auth-kicker">Avant de décider</p>
-          <h2>Contexte à vérifier</h2>
-          <ul className="report-check-list">
-            <ReportCheck
-              complete={outdoorContext?.weather.status === 'AVAILABLE'}
-              title={weatherChecklistTitle(outdoorContext?.weather)}
-              detail={weatherChecklistDetail(outdoorContext?.weather)}
-            />
-            <ReportCheck
-              complete={outdoorContext !== null}
-              title="Lumière et horaire"
-              detail={daylightChecklistDetail(outdoorContext)}
-            />
-            <ReportCheck
-              complete={false}
-              title="État du terrain et passages exposés"
-              detail="À vérifier avec une source locale récente"
-            />
-            <ReportCheck
-              complete={false}
-              title="Niveau, matériel et composition du groupe"
-              detail="À évaluer avant le départ"
-            />
-          </ul>
-          <p className="report-next-step">
-            Une prévision au point de départ peut différer fortement des
-            conditions en altitude, sur une crête ou dans une autre vallée.
-          </p>
-        </section>
-      </div>
+      <TrackAnalysisPanel analysis={analysis} />
 
       <section className="report-method">
         <div>
@@ -332,7 +296,9 @@ export function TrackReport({
           uniquement deux altitudes consécutives connues. La lumière est
           calculée localement au premier point du GPX avec le fuseau choisi.
           Avec consentement, les valeurs météo horaires sont agrégées sur la
-          durée prévue ; aucun jugement de sécurité n’en est déduit.
+          durée prévue. Le moteur applique ensuite des seuils versionnés et
+          affiche chaque preuve séparément ; il ne calcule aucun score de
+          sécurité.
         </p>
       </section>
     </main>
@@ -473,49 +439,6 @@ function ContextMetric({
   )
 }
 
-function ReportFact({
-  status,
-  title,
-  detail,
-}: {
-  status: 'known' | 'attention'
-  title: string
-  detail: string
-}) {
-  return (
-    <li>
-      <span
-        className={`report-status report-status-${status}`}
-        aria-hidden="true"
-      >
-        {status === 'known' ? '✓' : '!'}
-      </span>
-      <div>
-        <strong>{title}</strong>
-        <p>{detail}</p>
-      </div>
-    </li>
-  )
-}
-
-function ReportCheck({
-  complete,
-  title,
-  detail,
-}: {
-  complete: boolean
-  title: string
-  detail: string
-}) {
-  return (
-    <li>
-      <span aria-hidden="true">{complete ? '✓' : '○'}</span>
-      <strong>{title}</strong>
-      <small>{detail}</small>
-    </li>
-  )
-}
-
 function WeatherStatusBadge({
   status,
 }: {
@@ -533,52 +456,6 @@ function WeatherStatusBadge({
       {labels[status]}
     </span>
   )
-}
-
-function weatherChecklistTitle(weather?: WeatherContext): string {
-  if (weather?.status === 'AVAILABLE') {
-    return 'Prévision au départ consultée'
-  }
-
-  if (weather?.status === 'OUTSIDE_FORECAST_HORIZON') {
-    return 'Prévision pas encore disponible'
-  }
-
-  if (weather?.status === 'UNAVAILABLE') {
-    return 'Service météo indisponible'
-  }
-
-  return 'Météo locale et évolution'
-}
-
-function weatherChecklistDetail(weather?: WeatherContext): string {
-  if (weather?.status === 'AVAILABLE') {
-    return `Récupérée le ${formatCompactDate(weather.checkedAt)}`
-  }
-
-  if (weather?.status === 'NOT_REQUESTED') {
-    return 'Aucune coordonnée transmise'
-  }
-
-  if (weather?.status === 'OUTSIDE_FORECAST_HORIZON') {
-    return 'À actualiser à l’approche du départ'
-  }
-
-  return 'À réessayer et à vérifier ailleurs'
-}
-
-function daylightChecklistDetail(
-  context: OutdoorContext | null,
-): string {
-  if (!context) {
-    return 'Pas encore calculé'
-  }
-
-  const darkness = context.daylight.expectedDarknessMinutes
-
-  return darkness === 0
-    ? 'Sortie prévue dans le crépuscule civil calculé'
-    : `${formatDuration(darkness)} prévues hors crépuscule civil`
 }
 
 function weatherStatusExplanation(

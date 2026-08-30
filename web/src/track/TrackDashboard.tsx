@@ -20,10 +20,12 @@ import {
 import {
   getOutdoorContext,
   getTrack,
+  getTrackAnalysis,
   importTrack,
   listTracks,
   type OutdoorContext,
   type Track,
+  type TrackAnalysis,
 } from './tracks-api'
 
 const MAXIMUM_FILE_SIZE_BYTES = 10 * 1024 * 1024
@@ -39,6 +41,8 @@ export function TrackDashboard({
   const [reportTrack, setReportTrack] = useState<Track | null>(null)
   const [reportOutdoorContext, setReportOutdoorContext] =
     useState<OutdoorContext | null>(null)
+  const [reportAnalysis, setReportAnalysis] =
+    useState<TrackAnalysis | null>(null)
   const [openingTrackId, setOpeningTrackId] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [loadingTracks, setLoadingTracks] = useState(true)
@@ -167,12 +171,14 @@ export function TrackDashboard({
     setErrorMessage(null)
 
     try {
-      const [detailedTrack, outdoorContext] = await Promise.all([
+      const [detailedTrack, outdoorContext, analysis] = await Promise.all([
         getTrack(trackId),
         getOutdoorContext(trackId),
+        getTrackAnalysis(trackId),
       ])
       setReportTrack(detailedTrack)
       setReportOutdoorContext(outdoorContext)
+      setReportAnalysis(analysis)
     } catch (error: unknown) {
       if (error instanceof ApiError && error.status === 401) {
         onLoggedOut()
@@ -191,16 +197,19 @@ export function TrackDashboard({
     }
   }
 
-  if (reportTrack) {
+  if (reportTrack && reportAnalysis) {
     return (
       <TrackReport
         track={reportTrack}
         outdoorContext={reportOutdoorContext}
+        analysis={reportAnalysis}
         onOutdoorContextChange={setReportOutdoorContext}
+        onAnalysisChange={setReportAnalysis}
         onUnauthorized={onLoggedOut}
         onBack={() => {
           setReportTrack(null)
           setReportOutdoorContext(null)
+          setReportAnalysis(null)
         }}
       />
     )
