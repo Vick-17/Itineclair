@@ -18,9 +18,11 @@ import {
   formatMeters,
 } from './track-format'
 import {
+  getOutdoorContext,
   getTrack,
   importTrack,
   listTracks,
+  type OutdoorContext,
   type Track,
 } from './tracks-api'
 
@@ -35,6 +37,8 @@ export function TrackDashboard({
   const inputRef = useRef<HTMLInputElement>(null)
   const [tracks, setTracks] = useState<Track[]>([])
   const [reportTrack, setReportTrack] = useState<Track | null>(null)
+  const [reportOutdoorContext, setReportOutdoorContext] =
+    useState<OutdoorContext | null>(null)
   const [openingTrackId, setOpeningTrackId] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [loadingTracks, setLoadingTracks] = useState(true)
@@ -163,8 +167,12 @@ export function TrackDashboard({
     setErrorMessage(null)
 
     try {
-      const detailedTrack = await getTrack(trackId)
+      const [detailedTrack, outdoorContext] = await Promise.all([
+        getTrack(trackId),
+        getOutdoorContext(trackId),
+      ])
       setReportTrack(detailedTrack)
+      setReportOutdoorContext(outdoorContext)
     } catch (error: unknown) {
       if (error instanceof ApiError && error.status === 401) {
         onLoggedOut()
@@ -187,7 +195,13 @@ export function TrackDashboard({
     return (
       <TrackReport
         track={reportTrack}
-        onBack={() => setReportTrack(null)}
+        outdoorContext={reportOutdoorContext}
+        onOutdoorContextChange={setReportOutdoorContext}
+        onUnauthorized={onLoggedOut}
+        onBack={() => {
+          setReportTrack(null)
+          setReportOutdoorContext(null)
+        }}
       />
     )
   }

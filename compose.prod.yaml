@@ -52,6 +52,10 @@ services:
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:?required}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?required}
 
+      ITINECLAIR_WEATHER_ENABLED: ${ITINECLAIR_WEATHER_ENABLED:-false}
+      ITINECLAIR_WEATHER_BASE_URL: ${ITINECLAIR_WEATHER_BASE_URL:-https://customer-api.open-meteo.com}
+      ITINECLAIR_WEATHER_API_KEY: ${ITINECLAIR_WEATHER_API_KEY:-}
+
     depends_on:
       postgres:
         condition: service_healthy
