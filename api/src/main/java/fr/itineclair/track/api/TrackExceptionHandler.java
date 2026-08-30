@@ -11,6 +11,7 @@ import org.springframework.web.multipart.support.MissingServletRequestPartExcept
 
 import fr.itineclair.track.GpxFileTooLargeException;
 import fr.itineclair.track.InvalidGpxException;
+import fr.itineclair.track.TrackNotFoundException;
 import fr.itineclair.track.UnsupportedGpxFileException;
 
 @RestControllerAdvice
@@ -24,6 +25,15 @@ public class TrackExceptionHandler {
                 "Fichier GPX invalide",
                 exception.getMessage(),
                 "invalid_gpx");
+    }
+
+    @ExceptionHandler(TrackNotFoundException.class)
+    public ResponseEntity<ProblemDetail> handleTrackNotFound() {
+        return problem(
+                HttpStatus.NOT_FOUND,
+                "Trace introuvable",
+                "Cette trace n’existe pas ou n’est pas accessible.",
+                "track_not_found");
     }
 
     @ExceptionHandler(UnsupportedGpxFileException.class)

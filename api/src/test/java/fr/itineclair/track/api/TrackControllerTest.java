@@ -28,6 +28,7 @@ import fr.itineclair.security.SessionAuthenticationService;
 import fr.itineclair.track.InvalidGpxException;
 import fr.itineclair.track.TrackFacts;
 import fr.itineclair.track.TrackImportService;
+import fr.itineclair.track.TrackNotFoundException;
 import fr.itineclair.track.TrackSummary;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -123,6 +124,39 @@ class TrackControllerTest {
                         .value(TRACK_ID.toString()))
                 .andExpect(jsonPath("$[0].sourceFilename")
                         .value("tour-du-lac.gpx"));
+    }
+
+    @Test
+    void returnsAnOwnedTrackReport() throws Exception {
+        given(trackImportService.getTrack(
+                ACCOUNT_ID,
+                TRACK_ID))
+                .willReturn(summary());
+
+        mockMvc.perform(get("/tracks/{trackId}", TRACK_ID)
+                        .with(authentication(accountAuthentication())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id")
+                        .value(TRACK_ID.toString()))
+                .andExpect(jsonPath("$.facts.distanceMeters")
+                        .value(12_450.5));
+    }
+
+    @Test
+    void hidesMissingOrUnownedTracksBehindSameNotFoundResponse()
+            throws Exception {
+        given(trackImportService.getTrack(
+                ACCOUNT_ID,
+                TRACK_ID))
+                .willThrow(new TrackNotFoundException());
+
+        mockMvc.perform(get("/tracks/{trackId}", TRACK_ID)
+                        .with(authentication(accountAuthentication())))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code")
+                        .value("track_not_found"))
+                .andExpect(jsonPath("$.detail")
+                        .value("Cette trace n’existe pas ou n’est pas accessible."));
     }
 
     @Test
