@@ -30,6 +30,10 @@ export async function listTracks(): Promise<Track[]> {
   return getJson<Track[]>('/tracks')
 }
 
+export async function getTrack(trackId: string): Promise<Track> {
+  return getJson<Track>(`/tracks/${encodeURIComponent(trackId)}`)
+}
+
 export async function importTrack(file: File): Promise<Track> {
   const formData = new FormData()
   formData.append('file', file)

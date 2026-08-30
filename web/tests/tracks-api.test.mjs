@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { afterEach, test } from 'node:test'
 
 import {
+  getTrack,
   importTrack,
   listTracks,
 } from '../src/track/tracks-api.ts'
@@ -28,6 +29,29 @@ test('listTracks requests only the authenticated account collection', async () =
   }
 
   assert.deepEqual(await listTracks(), [])
+})
+
+test('getTrack requests a private report by identifier', async () => {
+  globalThis.fetch = async (url, options) => {
+    assert.equal(
+      url,
+      '/api/tracks/ce7b58c7-d6f4-4a26-8bad-68265bdb7bbf',
+    )
+    assert.equal(options.credentials, 'include')
+    assert.equal(options.method, 'GET')
+
+    return Response.json({
+      id: 'ce7b58c7-d6f4-4a26-8bad-68265bdb7bbf',
+      name: 'Tour du lac',
+      facts: null,
+    })
+  }
+
+  const track = await getTrack(
+    'ce7b58c7-d6f4-4a26-8bad-68265bdb7bbf',
+  )
+
+  assert.equal(track.name, 'Tour du lac')
 })
 
 test('importTrack sends GPX as multipart with a fresh CSRF token', async () => {
