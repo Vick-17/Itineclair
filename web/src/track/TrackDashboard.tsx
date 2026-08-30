@@ -13,6 +13,7 @@ import {
   importTrack,
   listTracks,
   type Track,
+  type TrackFacts,
 } from './tracks-api'
 
 const MAXIMUM_FILE_SIZE_BYTES = 10 * 1024 * 1024
@@ -294,24 +295,40 @@ export function TrackDashboard({
                   </div>
                   <h3>{track.name}</h3>
                   <p className="track-filename">{track.sourceFilename}</p>
-                  <dl>
-                    <div>
-                      <dt>Points</dt>
-                      <dd>{track.pointCount.toLocaleString('fr-FR')}</dd>
+                  {track.facts ? (
+                    <>
+                      <dl>
+                        <div>
+                          <dt>Distance</dt>
+                          <dd>{formatDistance(track.facts.distanceMeters)}</dd>
+                        </div>
+                        <div>
+                          <dt>D+ GPX</dt>
+                          <dd>{formatMeters(track.facts.elevationGainMeters)}</dd>
+                        </div>
+                        <div>
+                          <dt>Altitudes</dt>
+                          <dd>{formatElevationRange(track.facts)}</dd>
+                        </div>
+                        <div>
+                          <dt
+                            title={`Pentes calculées sur au moins ${track.facts.gradeMinimumRunMeters} mètres`}
+                          >
+                            Pentes max
+                          </dt>
+                          <dd>{formatMaximumGrades(track.facts)}</dd>
+                        </div>
+                      </dl>
+                      <p className="track-coverage">
+                        {formatCoverage(track)}
+                      </p>
+                    </>
+                  ) : (
+                    <div className="track-facts-unavailable">
+                      <strong>Calcul en attente</strong>
+                      <span>Les points seront analysés à la prochaine consultation.</span>
                     </div>
-                    <div>
-                      <dt>Segments</dt>
-                      <dd>{track.segmentCount}</dd>
-                    </div>
-                    <div>
-                      <dt>Altitude</dt>
-                      <dd>
-                        {track.elevationComplete
-                          ? 'Complète'
-                          : `${track.elevationPointCount}/${track.pointCount}`}
-                      </dd>
-                    </div>
-                  </dl>
+                  )}
                 </article>
               </li>
             ))}
@@ -359,6 +376,73 @@ function formatDate(value: string): string {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(date)
+}
+
+function formatDistance(meters: number): string {
+  if (meters < 1_000) {
+    return `${Math.round(meters).toLocaleString('fr-FR')} m`
+  }
+
+  return `${(meters / 1_000).toLocaleString('fr-FR', {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  })} km`
+}
+
+function formatMeters(meters: number | null): string {
+  if (meters === null) {
+    return '—'
+  }
+
+  return `${Math.round(meters).toLocaleString('fr-FR')} m`
+}
+
+function formatElevationRange(facts: TrackFacts): string {
+  if (
+    facts.minimumElevationMeters === null
+    || facts.maximumElevationMeters === null
+  ) {
+    return '—'
+  }
+
+  return `${Math.round(facts.minimumElevationMeters).toLocaleString('fr-FR')}–${Math.round(facts.maximumElevationMeters).toLocaleString('fr-FR')} m`
+}
+
+function formatMaximumGrades(facts: TrackFacts): string {
+  const grades: string[] = []
+
+  if (facts.maximumUphillGradePercent !== null) {
+    grades.push(
+      `+${facts.maximumUphillGradePercent.toLocaleString('fr-FR', {
+        maximumFractionDigits: 1,
+      })} %`,
+    )
+  }
+
+  if (facts.maximumDownhillGradePercent !== null) {
+    grades.push(
+      `−${facts.maximumDownhillGradePercent.toLocaleString('fr-FR', {
+        maximumFractionDigits: 1,
+      })} %`,
+    )
+  }
+
+  return grades.length > 0 ? grades.join(' / ') : '—'
+}
+
+function formatCoverage(track: Track): string {
+  const points = `${track.pointCount.toLocaleString('fr-FR')} points`
+  const segments = `${track.segmentCount} segment${track.segmentCount > 1 ? 's' : ''}`
+
+  if (track.elevationPointCount === 0) {
+    return `Sans altitude · ${points} · ${segments}`
+  }
+
+  if (track.elevationComplete) {
+    return `Altitude complète · ${points} · ${segments}`
+  }
+
+  return `Altitude partielle ${track.elevationPointCount.toLocaleString('fr-FR')}/${track.pointCount.toLocaleString('fr-FR')} · ${segments}`
 }
 
 function messageForError(error: unknown): string {

@@ -37,16 +37,32 @@ public class TrackImportService {
             VALUES (?, ?, ?, ?, ?, ?, ?)
             """;
 
+    private static final String SELECT_POINTS_SQL = """
+            SELECT
+                segment_number,
+                point_number,
+                latitude,
+                longitude,
+                elevation,
+                recorded_at
+            FROM track_points
+            WHERE track_id = ?
+            ORDER BY segment_number, point_number
+            """;
+
     private final TrackRepository trackRepository;
     private final GpxParser gpxParser;
+    private final TrackFactsCalculator trackFactsCalculator;
     private final JdbcTemplate jdbcTemplate;
 
     public TrackImportService(
             TrackRepository trackRepository,
             GpxParser gpxParser,
+            TrackFactsCalculator trackFactsCalculator,
             JdbcTemplate jdbcTemplate) {
         this.trackRepository = trackRepository;
         this.gpxParser = gpxParser;
+        this.trackFactsCalculator = trackFactsCalculator;
         this.jdbcTemplate = jdbcTemplate;
     }
 
@@ -79,10 +95,15 @@ public class TrackImportService {
                     exception);
         }
 
+        TrackFacts facts =
+                trackFactsCalculator.calculate(
+                        parsedGpx.points());
+
         Track track = Track.create(
                 ownerId,
                 sourceFilename,
-                parsedGpx);
+                parsedGpx,
+                facts);
 
         trackRepository.saveAndFlush(track);
         persistPoints(track.id(), parsedGpx.points());
@@ -90,15 +111,57 @@ public class TrackImportService {
         return TrackSummary.from(track);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<TrackSummary> listTracks(UUID ownerId) {
         Objects.requireNonNull(ownerId, "ownerId");
 
-        return trackRepository
-                .findAllByOwnerIdOrderByCreatedAtDesc(ownerId)
-                .stream()
+        List<Track> tracks = trackRepository
+                .findAllByOwnerIdOrderByCreatedAtDesc(ownerId);
+
+        tracks.stream()
+                .filter(Track::needsFactsRefresh)
+                .forEach(this::refreshFacts);
+
+        return tracks.stream()
                 .map(TrackSummary::from)
                 .toList();
+    }
+
+    private void refreshFacts(Track track) {
+        TrackFacts facts = trackFactsCalculator.calculate(
+                loadPoints(track.id()));
+        track.updateFacts(facts);
+    }
+
+    private List<ParsedTrackPoint> loadPoints(UUID trackId) {
+        return jdbcTemplate.query(
+                SELECT_POINTS_SQL,
+                statement -> statement.setObject(1, trackId),
+                (resultSet, rowNumber) -> {
+                    double elevationValue =
+                            resultSet.getDouble("elevation");
+
+                    Double elevation = resultSet.wasNull()
+                            ? null
+                            : elevationValue;
+
+                    OffsetDateTime recordedAt =
+                            resultSet.getObject(
+                                    "recorded_at",
+                                    OffsetDateTime.class);
+
+                    return new ParsedTrackPoint(
+                            resultSet.getInt(
+                                    "segment_number"),
+                            resultSet.getInt(
+                                    "point_number"),
+                            resultSet.getDouble("latitude"),
+                            resultSet.getDouble("longitude"),
+                            elevation,
+                            recordedAt == null
+                                    ? null
+                                    : recordedAt.toInstant());
+                });
     }
 
     private void persistPoints(
@@ -110,15 +173,25 @@ public class TrackImportService {
                 POINT_BATCH_SIZE,
                 (statement, point) -> {
                     statement.setObject(1, trackId);
-                    statement.setInt(2, point.segmentNumber());
-                    statement.setInt(3, point.pointNumber());
-                    statement.setDouble(4, point.latitude());
-                    statement.setDouble(5, point.longitude());
+                    statement.setInt(
+                            2,
+                            point.segmentNumber());
+                    statement.setInt(
+                            3,
+                            point.pointNumber());
+                    statement.setDouble(
+                            4,
+                            point.latitude());
+                    statement.setDouble(
+                            5,
+                            point.longitude());
 
                     if (point.elevation() == null) {
                         statement.setNull(6, Types.DOUBLE);
                     } else {
-                        statement.setDouble(6, point.elevation());
+                        statement.setDouble(
+                                6,
+                                point.elevation());
                     }
 
                     if (point.recordedAt() == null) {

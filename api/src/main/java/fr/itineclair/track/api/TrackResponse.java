@@ -13,6 +13,7 @@ public record TrackResponse(
         int pointCount,
         int elevationPointCount,
         boolean elevationComplete,
+        TrackFactsResponse facts,
         Instant createdAt) {
 
     static TrackResponse from(TrackSummary track) {
@@ -23,7 +24,9 @@ public record TrackResponse(
                 track.segmentCount(),
                 track.pointCount(),
                 track.elevationPointCount(),
-                track.elevationPointCount() == track.pointCount(),
+                track.elevationPointCount()
+                        == track.pointCount(),
+                TrackFactsResponse.from(track),
                 track.createdAt());
     }
 }

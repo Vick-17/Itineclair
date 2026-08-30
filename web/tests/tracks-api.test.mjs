@@ -50,6 +50,16 @@ test('importTrack sends GPX as multipart with a fresh CSRF token', async () => {
         pointCount: 2,
         elevationPointCount: 2,
         elevationComplete: true,
+        facts: {
+          distanceMeters: 12_450.5,
+          elevationGainMeters: 850,
+          elevationLossMeters: 810,
+          minimumElevationMeters: 1_020,
+          maximumElevationMeters: 1_870,
+          maximumUphillGradePercent: 18.4,
+          maximumDownhillGradePercent: 21.2,
+          gradeMinimumRunMeters: 25,
+        },
         createdAt: '2026-08-29T12:00:00Z',
       },
       { status: 201 },
@@ -65,6 +75,8 @@ test('importTrack sends GPX as multipart with a fresh CSRF token', async () => {
   const imported = await importTrack(file)
 
   assert.equal(imported.name, 'Tour du lac')
+  assert.equal(imported.facts.distanceMeters, 12_450.5)
+  assert.equal(imported.facts.gradeMinimumRunMeters, 25)
   assert.equal(calls.length, 2)
   assert.equal(calls[1].url, '/api/tracks')
   assert.equal(calls[1].options.method, 'POST')
