@@ -26,6 +26,7 @@ import fr.itineclair.security.LoginAttemptLimiter;
 import fr.itineclair.security.SecurityConfiguration;
 import fr.itineclair.security.SessionAuthenticationService;
 import fr.itineclair.track.InvalidGpxException;
+import fr.itineclair.track.TrackFacts;
 import fr.itineclair.track.TrackImportService;
 import fr.itineclair.track.TrackSummary;
 
@@ -97,7 +98,17 @@ class TrackControllerTest {
                 .andExpect(jsonPath("$.elevationPointCount")
                         .value(120))
                 .andExpect(jsonPath("$.elevationComplete")
-                        .value(true));
+                        .value(true))
+                .andExpect(jsonPath("$.facts.distanceMeters")
+                        .value(12_450.5))
+                .andExpect(jsonPath("$.facts.elevationGainMeters")
+                        .value(850.0))
+                .andExpect(jsonPath("$.facts.minimumElevationMeters")
+                        .value(1_020.0))
+                .andExpect(jsonPath("$.facts.maximumUphillGradePercent")
+                        .value(18.4))
+                .andExpect(jsonPath("$.facts.gradeMinimumRunMeters")
+                        .value(25));
     }
 
     @Test
@@ -184,6 +195,14 @@ class TrackControllerTest {
                 2,
                 120,
                 120,
+                TrackFacts.CURRENT_VERSION,
+                12_450.5,
+                850.0,
+                810.0,
+                1_020.0,
+                1_870.0,
+                18.4,
+                21.2,
                 Instant.parse("2026-08-29T12:00:00Z"));
     }
 

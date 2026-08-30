@@ -29,6 +29,7 @@
         <java.version>25</java.version>
         <springdoc.version>3.1.0</springdoc.version>
         <password4j.version>1.8.4</password4j.version>
+        <geographiclib.version>2.1</geographiclib.version>
     </properties>
 
     <dependencies>
@@ -54,6 +55,13 @@
         <dependency>
             <groupId>com.github.ben-manes.caffeine</groupId>
             <artifactId>caffeine</artifactId>
+        </dependency>
+
+        <!-- Calculs géodésiques exacts sur l’ellipsoïde WGS84 -->
+        <dependency>
+            <groupId>net.sf.geographiclib</groupId>
+            <artifactId>GeographicLib-Java</artifactId>
+            <version>${geographiclib.version}</version>
         </dependency>
 
         <!-- Persistance -->
