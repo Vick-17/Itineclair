@@ -30,6 +30,7 @@
         <springdoc.version>3.1.0</springdoc.version>
         <password4j.version>1.8.4</password4j.version>
         <geographiclib.version>2.1</geographiclib.version>
+        <commons-suncalc.version>3.11</commons-suncalc.version>
     </properties>
 
     <dependencies>
@@ -62,6 +63,13 @@
             <groupId>net.sf.geographiclib</groupId>
             <artifactId>GeographicLib-Java</artifactId>
             <version>${geographiclib.version}</version>
+        </dependency>
+
+        <!-- Lever, coucher et crépuscule calculés localement, sans API tierce -->
+        <dependency>
+            <groupId>org.shredzone.commons</groupId>
+            <artifactId>commons-suncalc</artifactId>
+            <version>${commons-suncalc.version}</version>
         </dependency>
 
         <!-- Persistance -->

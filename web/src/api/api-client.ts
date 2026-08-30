@@ -64,12 +64,24 @@ export async function getJson<T>(path: string): Promise<T> {
 
 export async function postJson<T = void>(
   path: string,
-  body?: Record<string, string>,
+  body?: unknown,
 ): Promise<T> {
   return request<T>(path, {
     method: 'POST',
     body: body ? JSON.stringify(body) : undefined,
     contentType: body ? 'application/json' : undefined,
+    csrf: true,
+  })
+}
+
+export async function putJson<T>(
+  path: string,
+  body: unknown,
+): Promise<T> {
+  return request<T>(path, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+    contentType: 'application/json',
     csrf: true,
   })
 }
@@ -86,7 +98,7 @@ export async function postForm<T>(
 }
 
 type RequestOptions = {
-  method?: 'GET' | 'POST'
+  method?: 'GET' | 'POST' | 'PUT'
   body?: BodyInit
   contentType?: string
   csrf?: boolean

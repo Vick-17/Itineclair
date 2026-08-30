@@ -2,9 +2,11 @@ import assert from 'node:assert/strict'
 import { afterEach, test } from 'node:test'
 
 import {
+  getOutdoorContext,
   getTrack,
   importTrack,
   listTracks,
+  saveOutdoorContext,
 } from '../src/track/tracks-api.ts'
 
 const originalFetch = globalThis.fetch
@@ -52,6 +54,105 @@ test('getTrack requests a private report by identifier', async () => {
   )
 
   assert.equal(track.name, 'Tour du lac')
+})
+
+test('getOutdoorContext keeps an unplanned response explicit', async () => {
+  globalThis.fetch = async (url, options) => {
+    assert.equal(
+      url,
+      '/api/tracks/ce7b58c7-d6f4-4a26-8bad-68265bdb7bbf/outdoor-context',
+    )
+    assert.equal(options.credentials, 'include')
+    assert.equal(options.method, 'GET')
+
+    return Response.json({
+      planned: false,
+      plannedStartLocal: null,
+      plannedStartAt: null,
+      plannedEndAt: null,
+      plannedDurationMinutes: null,
+      timeZone: null,
+      updatedAt: null,
+      daylight: null,
+      weather: null,
+    })
+  }
+
+  assert.equal(
+    await getOutdoorContext(
+      'ce7b58c7-d6f4-4a26-8bad-68265bdb7bbf',
+    ),
+    null,
+  )
+})
+
+test('saveOutdoorContext sends a CSRF-protected consent choice', async () => {
+  globalThis.document = { cookie: 'XSRF-TOKEN=outdoor-csrf-token' }
+  const calls = []
+
+  globalThis.fetch = async (url, options) => {
+    calls.push({ url, options })
+
+    if (url === '/api/auth/csrf') {
+      return new Response(null, { status: 204 })
+    }
+
+    return Response.json({
+      planned: true,
+      plannedStartLocal: '2026-08-31T08:00:00',
+      plannedStartAt: '2026-08-31T06:00:00Z',
+      plannedEndAt: '2026-08-31T12:00:00Z',
+      plannedDurationMinutes: 360,
+      timeZone: 'Europe/Paris',
+      updatedAt: '2026-08-30T10:00:00Z',
+      daylight: {
+        sunrise: '2026-08-31T04:51:00Z',
+        sunset: '2026-08-31T18:16:00Z',
+        civilDawn: '2026-08-31T04:19:00Z',
+        civilDusk: '2026-08-31T18:48:00Z',
+        expectedDaylightMinutes: 360,
+        expectedDarknessMinutes: 0,
+        condition: 'NORMAL',
+      },
+      weather: {
+        status: 'NOT_REQUESTED',
+        source: 'Open-Meteo',
+        attributionUrl: 'https://open-meteo.com/',
+      },
+    })
+  }
+
+  const saved = await saveOutdoorContext(
+    'ce7b58c7-d6f4-4a26-8bad-68265bdb7bbf',
+    {
+      plannedStartLocal: '2026-08-31T08:00:00',
+      plannedDurationMinutes: 360,
+      timeZone: 'Europe/Paris',
+      shareStartPointWithWeatherProvider: false,
+    },
+  )
+
+  assert.equal(saved.weather.status, 'NOT_REQUESTED')
+  assert.equal(calls.length, 2)
+  assert.equal(
+    calls[1].url,
+    '/api/tracks/ce7b58c7-d6f4-4a26-8bad-68265bdb7bbf/outdoor-context',
+  )
+  assert.equal(calls[1].options.method, 'PUT')
+  assert.equal(
+    calls[1].options.headers.get('X-XSRF-TOKEN'),
+    'outdoor-csrf-token',
+  )
+  assert.equal(
+    calls[1].options.headers.get('Content-Type'),
+    'application/json',
+  )
+  assert.deepEqual(JSON.parse(calls[1].options.body), {
+    plannedStartLocal: '2026-08-31T08:00:00',
+    plannedDurationMinutes: 360,
+    timeZone: 'Europe/Paris',
+    shareStartPointWithWeatherProvider: false,
+  })
 })
 
 test('importTrack sends GPX as multipart with a fresh CSRF token', async () => {

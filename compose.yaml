@@ -12,6 +12,9 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-itineclair}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-itineclair}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-itineclair}
+      ITINECLAIR_WEATHER_ENABLED: ${ITINECLAIR_WEATHER_ENABLED:-true}
+      ITINECLAIR_WEATHER_BASE_URL: ${ITINECLAIR_WEATHER_BASE_URL:-https://api.open-meteo.com}
+      ITINECLAIR_WEATHER_API_KEY: ${ITINECLAIR_WEATHER_API_KEY:-}
       CHOKIDAR_USEPOLLING: "true"
     volumes:
       - .:/workspace
