@@ -1,4 +1,5 @@
 import {
+  deleteJson,
   getJson,
   postForm,
   putJson,
@@ -98,6 +99,57 @@ export type SaveOutdoorContext = {
   plannedDurationMinutes: number
   timeZone: string
   shareStartPointWithWeatherProvider: boolean
+}
+
+export type FeedbackOutcome =
+  | 'COMPLETED_AS_PLANNED'
+  | 'COMPLETED_WITH_CHANGES'
+  | 'TURNED_BACK'
+  | 'NOT_STARTED'
+
+export type ConditionsComparison =
+  | 'BETTER_THAN_EXPECTED'
+  | 'AS_EXPECTED'
+  | 'WORSE_THAN_EXPECTED'
+  | 'NOT_COMPARED'
+
+export type FeedbackIssue =
+  | 'WEATHER'
+  | 'TERRAIN'
+  | 'FATIGUE'
+  | 'NAVIGATION'
+  | 'EQUIPMENT'
+
+export type TrackFeedback = {
+  recorded: true
+  trackId: string
+  outcome: FeedbackOutcome
+  actualDurationMinutes: number | null
+  perceivedEffort: number | null
+  conditionsComparison: ConditionsComparison
+  observedIssues: FeedbackIssue[]
+  createdAt: string
+  updatedAt: string
+}
+
+type TrackFeedbackResponse = TrackFeedback | {
+  recorded: false
+  trackId: string
+  outcome: null
+  actualDurationMinutes: null
+  perceivedEffort: null
+  conditionsComparison: null
+  observedIssues: []
+  createdAt: null
+  updatedAt: null
+}
+
+export type SaveTrackFeedback = {
+  outcome: FeedbackOutcome
+  actualDurationMinutes: number | null
+  perceivedEffort: number | null
+  conditionsComparison: ConditionsComparison
+  observedIssues: FeedbackIssue[]
 }
 
 export type AnalysisCategory =
@@ -201,4 +253,26 @@ export async function saveOutdoorContext(
     `/tracks/${encodeURIComponent(trackId)}/outdoor-context`,
     context,
   )
+}
+
+export async function getTrackFeedback(
+  trackId: string,
+): Promise<TrackFeedback | null> {
+  const response = await getJson<TrackFeedbackResponse>(
+    `/tracks/${encodeURIComponent(trackId)}/feedback`,
+  )
+  return response.recorded ? response : null
+}
+
+export async function saveTrackFeedback(
+  trackId: string,
+  feedback: SaveTrackFeedback,
+): Promise<TrackFeedback> {
+  return putJson<TrackFeedback>(
+    `/tracks/${encodeURIComponent(trackId)}/feedback`, feedback,
+  )
+}
+
+export async function deleteTrackFeedback(trackId: string): Promise<void> {
+  return deleteJson(`/tracks/${encodeURIComponent(trackId)}/feedback`)
 }

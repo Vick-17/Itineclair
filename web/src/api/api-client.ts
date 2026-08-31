@@ -86,6 +86,13 @@ export async function putJson<T>(
   })
 }
 
+export async function deleteJson(path: string): Promise<void> {
+  return request<void>(path, {
+    method: 'DELETE',
+    csrf: true,
+  })
+}
+
 export async function postForm<T>(
   path: string,
   formData: FormData,
@@ -98,7 +105,7 @@ export async function postForm<T>(
 }
 
 type RequestOptions = {
-  method?: 'GET' | 'POST' | 'PUT'
+  method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
   body?: BodyInit
   contentType?: string
   csrf?: boolean

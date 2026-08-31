@@ -2034,3 +2034,37 @@
     grid-template-columns: 1fr;
   }
 }
+
+.track-feedback {
+  margin-top: 24px;
+  padding: clamp(23px, 4vw, 36px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-large);
+  background: rgba(255, 255, 255, 0.72);
+}
+.feedback-heading { display: grid; grid-template-columns: 1fr auto; gap: 28px; }
+.feedback-heading h2 { margin: 0; color: var(--forest-950); font-size: clamp(1.5rem, 3vw, 2.15rem); }
+.feedback-heading p { color: var(--ink-muted); }
+.feedback-heading time { color: var(--ink-muted); font-size: .62rem; }
+.feedback-loading { margin-top: 22px; padding: 20px; border: 1px dashed var(--line-strong); border-radius: var(--radius-medium); }
+.feedback-form { margin-top: 24px; display: grid; gap: 18px; }
+.feedback-fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+.feedback-fieldset legend, .feedback-duration > span { margin-bottom: 9px; color: var(--ink-strong); font-size: .72rem; font-weight: 780; }
+.feedback-outcomes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.feedback-choice { padding: 13px; display: flex; gap: 10px; border: 1px solid var(--line); border-radius: 11px; cursor: pointer; }
+.feedback-choice:has(input:checked) { border-color: var(--forest-800); background: var(--forest-50); }
+.feedback-details { padding: 20px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; border: 1px solid var(--line); border-radius: var(--radius-medium); background: rgba(244, 246, 239, .7); }
+.feedback-details[aria-disabled="true"] { opacity: .55; }
+.feedback-duration { display: grid; }
+.feedback-duration input { min-height: 45px; padding: 10px; border: 1px solid var(--line); border-radius: 10px; }
+.feedback-inline-options, .feedback-scale { display: flex; flex-wrap: wrap; gap: 7px; }
+.feedback-inline-options label, .feedback-scale label { padding: 8px 10px; display: flex; gap: 7px; border: 1px solid var(--line); border-radius: 999px; cursor: pointer; }
+.feedback-actions { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
+.feedback-save { width: auto; min-width: 235px; }
+.feedback-delete { min-height: 46px; padding: 10px 14px; border: 0; color: #7c2f27; background: transparent; font-weight: 760; }
+@media (max-width: 700px) {
+  .track-feedback { padding: 20px 16px; }
+  .feedback-heading, .feedback-details, .feedback-outcomes { grid-template-columns: 1fr; }
+  .feedback-actions { align-items: stretch; flex-direction: column-reverse; }
+  .feedback-save { width: 100%; min-width: 0; }
+}

@@ -399,7 +399,7 @@ export function TrackDashboard({
                   >
                     {openingTrackId === track.id
                       ? 'Ouverture…'
-                      : 'Ouvrir le rapport'}
+                      : 'Rapport et retour terrain'}
                     <span aria-hidden="true">→</span>
                   </button>
                 </article>

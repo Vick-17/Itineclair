@@ -1,6 +1,6 @@
 # Registre des risques produit et techniques
 
-Dernière revue : 2026-08-30. Ce registre est vivant ; une ligne fermée reste
+Dernière revue : 2026-08-31. Ce registre est vivant ; une ligne fermée reste
 dans l’historique avec sa preuve.
 
 | ID | Danger et scénario d’échec | Gravité / probabilité / détectabilité | Traitement et comportement dégradé | Message utilisateur | Responsable / échéance | Preuve / état |
@@ -11,7 +11,9 @@ dans l’historique avec sa preuve.
 | PHY-004 | Une météo absente, périmée ou en panne est assimilée à de bonnes conditions. | grave / possible / forte | Éviter : états explicites, âge contrôlé, aucune valeur par défaut, lumière et faits restent utilisables. | « Le moteur s’abstient d’interpréter les conditions. » | Tech / branche `feat/rule-analysis` | Tests absence, panne et fraîcheur / contrôlé techniquement |
 | PHY-005 | Alertes, fermeture, avalanche ou état du terrain absents du MVP. | critique / possible / forte | Accepter temporairement avant bêta privée seulement : checklist non acquittable, limite toujours visible, lien vers sources officielles ; intégrer des sources adaptées avant usage public. | « Non intégrées : consulter les autorités, gestionnaires et la Vigilance. » | Produit + Données / avant bêta publique | Intégration fournisseur à définir / **ouvert** |
 | DATA-001 | GPX incomplet ou bruité produit une fausse précision de dénivelé/pente. | importante / probable / forte | Réduire : couverture altitude, rupture sur valeur absente, fenêtre de pente ≥ 25 m, signal de qualité et explication. | « Les valeurs altimétriques sont partielles. » | Tech / réalisé | Tests calcul et règle qualité / contrôlé |
+| DATA-002 | Un retour déclaré est interprété comme une vérité terrain ou modifie silencieusement une analyse. | importante / possible / forte | Conserver le feedback séparément et ne pas l’injecter dans le moteur du MVP. | « Ce retour ne modifie pas le rapport de sécurité. » | Produit + Tech / `feat/history-feedback` | Séparation API/UI et documentation / contrôlé techniquement |
 | PRIV-001 | Une coordonnée sensible est envoyée sans consentement. | importante / peu probable / forte | Éviter : appel serveur uniquement sur choix booléen explicite, retrait effaçant prévision et consentement, aucune coordonnée dans le front ou les logs. | Texte de consentement au point de départ. | Tech + Vie privée / réalisé | Tests service et contrôleur / contrôlé |
+| PRIV-002 | Un commentaire révèle inutilement une donnée sensible, une identité ou une localisation. | importante / possible / forte | Aucun texte libre dans le MVP, catégories fermées et suppression disponible. | « Retour privé et structuré. » | Produit + Vie privée / `feat/history-feedback` | Schéma fermé et endpoint DELETE / contrôlé techniquement |
 | SEC-001 | Un compte lit l’analyse d’une trace appartenant à un autre compte. | importante / peu probable / forte | Éviter : toutes les entrées de l’analyse passent par les services filtrés par propriétaire ; 404 uniforme. | Réponse 404 sans fuite de propriétaire. | Tech / branche `feat/rule-analysis` | Test d’orchestration propriétaire + tests d’accès existants / contrôlé |
 
 Un risque résiduel élevé relatif à la sécurité physique ne peut être accepté

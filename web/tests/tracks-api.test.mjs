@@ -2,13 +2,54 @@ import assert from 'node:assert/strict'
 import { afterEach, test } from 'node:test'
 
 import {
+  deleteTrackFeedback,
   getOutdoorContext,
   getTrack,
   getTrackAnalysis,
+  getTrackFeedback,
   importTrack,
   listTracks,
   saveOutdoorContext,
+  saveTrackFeedback,
 } from '../src/track/tracks-api.ts'
+
+test('getTrackFeedback keeps a missing feedback explicit', async () => {
+  globalThis.fetch = async (url, options) => {
+    assert.equal(url, '/api/tracks/track-id/feedback')
+    assert.equal(options.method, 'GET')
+    return Response.json({ recorded: false, trackId: 'track-id', observedIssues: [] })
+  }
+  assert.equal(await getTrackFeedback('track-id'), null)
+})
+
+test('saveTrackFeedback sends structured data with CSRF protection', async () => {
+  globalThis.document = { cookie: 'XSRF-TOKEN=feedback-token' }
+  const calls = []
+  globalThis.fetch = async (url, options) => {
+    calls.push({ url, options })
+    if (url === '/api/auth/csrf') return new Response(null, { status: 204 })
+    return Response.json({ recorded: true, outcome: 'TURNED_BACK' })
+  }
+  const payload = { outcome: 'TURNED_BACK', actualDurationMinutes: 180,
+    perceivedEffort: 5, conditionsComparison: 'WORSE_THAN_EXPECTED',
+    observedIssues: ['TERRAIN'] }
+  assert.equal((await saveTrackFeedback('track-id', payload)).outcome, 'TURNED_BACK')
+  assert.equal(calls[1].options.method, 'PUT')
+  assert.equal(calls[1].options.headers.get('X-XSRF-TOKEN'), 'feedback-token')
+  assert.deepEqual(JSON.parse(calls[1].options.body), payload)
+})
+
+test('deleteTrackFeedback uses DELETE with a fresh CSRF token', async () => {
+  globalThis.document = { cookie: 'XSRF-TOKEN=delete-token' }
+  const calls = []
+  globalThis.fetch = async (url, options) => {
+    calls.push({ url, options })
+    return new Response(null, { status: 204 })
+  }
+  await deleteTrackFeedback('track-id')
+  assert.equal(calls[1].options.method, 'DELETE')
+  assert.equal(calls[1].options.headers.get('X-XSRF-TOKEN'), 'delete-token')
+})
 
 const originalFetch = globalThis.fetch
 const originalDocument = globalThis.document

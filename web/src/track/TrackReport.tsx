@@ -5,6 +5,7 @@ import {
 
 import { ApiError } from '../api/api-client'
 import { TrackAnalysisPanel } from './TrackAnalysisPanel'
+import { TrackFeedbackPanel } from './TrackFeedbackPanel'
 import {
   formatCoverage,
   formatDistance,
@@ -177,6 +178,11 @@ export function TrackReport({
           <p>Recharge la bibliothèque pour relancer l’analyse de cette trace.</p>
         </section>
       )}
+
+      <TrackFeedbackPanel
+        trackId={track.id}
+        onUnauthorized={onUnauthorized}
+      />
 
       <section className="outdoor-context" aria-labelledby="outdoor-title">
         <div className="outdoor-heading">
