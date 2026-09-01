@@ -14,6 +14,8 @@ import {
 } from './auth/auth-api'
 import { ApiError } from './api/api-client'
 import { TrackDashboard } from './track/TrackDashboard'
+import { SharedReportPage } from './sharing/SharedReportPage'
+import { readShareRoute } from './sharing/share-route'
 
 type SessionState =
   | { status: 'loading' }
@@ -23,10 +25,26 @@ type SessionState =
 type AuthMode = 'login' | 'register'
 
 function App() {
+  const [shareRoute, setShareRoute] = useState(
+    () => readShareRoute(window.location.hash),
+  )
   const [session, setSession] = useState<SessionState>({ status: 'loading' })
   const [bootstrapMessage, setBootstrapMessage] = useState<string | null>(null)
 
   useEffect(() => {
+    function handleHashChange() {
+      setShareRoute(readShareRoute(window.location.hash))
+    }
+
+    window.addEventListener('hashchange', handleHashChange)
+    return () => window.removeEventListener('hashchange', handleHashChange)
+  }, [])
+
+  useEffect(() => {
+    if (shareRoute.matched) {
+      return
+    }
+
     let active = true
 
     currentAccount()
@@ -53,7 +71,11 @@ function App() {
     return () => {
       active = false
     }
-  }, [])
+  }, [shareRoute.matched])
+
+  if (shareRoute.matched) {
+    return <SharedReportPage token={shareRoute.token} />
+  }
 
   return (
     <div className="app-shell">

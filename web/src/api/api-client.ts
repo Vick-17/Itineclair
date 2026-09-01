@@ -62,6 +62,16 @@ export async function getJson<T>(path: string): Promise<T> {
   return request<T>(path)
 }
 
+export async function getPublicJson<T>(
+  path: string,
+  headers: HeadersInit,
+): Promise<T> {
+  return request<T>(path, {
+    credentials: 'omit',
+    headers,
+  })
+}
+
 export async function postJson<T = void>(
   path: string,
   body?: unknown,
@@ -109,15 +119,16 @@ type RequestOptions = {
   body?: BodyInit
   contentType?: string
   csrf?: boolean
+  credentials?: RequestCredentials
+  headers?: HeadersInit
 }
 
 async function request<T>(
   path: string,
   options: RequestOptions = {},
 ): Promise<T> {
-  const headers = new Headers({
-    Accept: 'application/json',
-  })
+  const headers = new Headers(options.headers)
+  headers.set('Accept', 'application/json')
 
   if (options.contentType) {
     headers.set('Content-Type', options.contentType)
@@ -129,7 +140,7 @@ async function request<T>(
 
   const response = await fetch(`${API_ROOT}${path}`, {
     method: options.method ?? 'GET',
-    credentials: 'include',
+    credentials: options.credentials ?? 'include',
     headers,
     body: options.body,
   })

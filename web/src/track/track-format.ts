@@ -60,7 +60,15 @@ export function formatGrade(
   })} %`
 }
 
-export function formatCoverage(track: Track): string {
+export function formatCoverage(
+  track: Pick<
+    Track,
+    | 'pointCount'
+    | 'segmentCount'
+    | 'elevationPointCount'
+    | 'elevationComplete'
+  >,
+): string {
   const points = `${track.pointCount.toLocaleString('fr-FR')} points`
   const segments = `${track.segmentCount} segment${track.segmentCount > 1 ? 's' : ''}`
 

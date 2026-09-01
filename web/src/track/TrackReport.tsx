@@ -6,6 +6,7 @@ import {
 import { ApiError } from '../api/api-client'
 import { TrackAnalysisPanel } from './TrackAnalysisPanel'
 import { TrackFeedbackPanel } from './TrackFeedbackPanel'
+import { TrackSharePanel } from '../sharing/TrackSharePanel'
 import {
   formatCoverage,
   formatDistance,
@@ -291,6 +292,11 @@ export function TrackReport({
       </section>
 
       <TrackAnalysisPanel analysis={analysis} />
+
+      <TrackSharePanel
+        trackId={track.id}
+        onUnauthorized={onUnauthorized}
+      />
 
       <section className="report-method">
         <div>
