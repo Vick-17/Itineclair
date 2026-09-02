@@ -4,6 +4,7 @@ import java.util.Locale;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationServiceException;
@@ -26,16 +27,19 @@ public class SessionAuthenticationService {
     private final SessionAuthenticationStrategy sessionAuthenticationStrategy;
     private final SecurityContextRepository securityContextRepository;
     private final SecurityContextHolderStrategy securityContextHolderStrategy;
+    private final AccountSessionRegistry accountSessionRegistry;
 
     public SessionAuthenticationService(
             AuthenticationManager authenticationManager,
             SessionAuthenticationStrategy sessionAuthenticationStrategy,
             SecurityContextRepository securityContextRepository,
-            SecurityContextHolderStrategy securityContextHolderStrategy) {
+            SecurityContextHolderStrategy securityContextHolderStrategy,
+            AccountSessionRegistry accountSessionRegistry) {
         this.authenticationManager = authenticationManager;
         this.sessionAuthenticationStrategy = sessionAuthenticationStrategy;
         this.securityContextRepository = securityContextRepository;
         this.securityContextHolderStrategy = securityContextHolderStrategy;
+        this.accountSessionRegistry = accountSessionRegistry;
     }
 
     public AccountPrincipal authenticate(
@@ -67,6 +71,9 @@ public class SessionAuthenticationService {
                 context,
                 request,
                 response);
+
+        HttpSession session = request.getSession();
+        accountSessionRegistry.register(principal.id(), session);
 
         return principal;
     }

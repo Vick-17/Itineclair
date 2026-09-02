@@ -100,6 +100,7 @@ function App() {
 
         {session.status === 'authenticated' && (
           <TrackDashboard
+            account={session.account}
             onLoggedOut={() => setSession({ status: 'guest' })}
           />
         )}

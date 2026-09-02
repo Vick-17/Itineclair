@@ -84,6 +84,32 @@ export async function postJson<T = void>(
   })
 }
 
+export type DownloadedFile = {
+  blob: Blob
+  fileName: string
+}
+
+export async function postDownload(
+  path: string,
+  body: unknown,
+  fallbackFileName: string,
+): Promise<DownloadedFile> {
+  const response = await fetchApi(path, {
+    method: 'POST',
+    body: JSON.stringify(body),
+    contentType: 'application/json',
+    csrf: true,
+    headers: {
+      Accept: 'application/zip',
+    },
+  })
+
+  return {
+    blob: await response.blob(),
+    fileName: readDownloadFileName(response, fallbackFileName),
+  }
+}
+
 export async function putJson<T>(
   path: string,
   body: unknown,
@@ -96,9 +122,14 @@ export async function putJson<T>(
   })
 }
 
-export async function deleteJson(path: string): Promise<void> {
+export async function deleteJson(
+  path: string,
+  body?: unknown,
+): Promise<void> {
   return request<void>(path, {
     method: 'DELETE',
+    body: body ? JSON.stringify(body) : undefined,
+    contentType: body ? 'application/json' : undefined,
     csrf: true,
   })
 }
@@ -127,8 +158,31 @@ async function request<T>(
   path: string,
   options: RequestOptions = {},
 ): Promise<T> {
+  const response = await fetchApi(path, options)
+
+  if (response.status === 204) {
+    return undefined as T
+  }
+
+  try {
+    return (await response.json()) as T
+  } catch {
+    throw new ApiError('La réponse du serveur est illisible.', {
+      status: response.status,
+      code: 'invalid_server_response',
+    })
+  }
+}
+
+async function fetchApi(
+  path: string,
+  options: RequestOptions = {},
+): Promise<Response> {
   const headers = new Headers(options.headers)
-  headers.set('Accept', 'application/json')
+
+  if (!headers.has('Accept')) {
+    headers.set('Accept', 'application/json')
+  }
 
   if (options.contentType) {
     headers.set('Content-Type', options.contentType)
@@ -149,18 +203,45 @@ async function request<T>(
     throw await toApiError(response)
   }
 
-  if (response.status === 204) {
-    return undefined as T
+  return response
+}
+
+function readDownloadFileName(
+  response: Response,
+  fallbackFileName: string,
+): string {
+  const contentDisposition =
+    response.headers.get('Content-Disposition') ?? ''
+  const encodedMatch = contentDisposition.match(
+    /filename\*=UTF-8''([^;]+)/i,
+  )
+  const plainMatch = contentDisposition.match(
+    /filename="?([^";]+)"?/i,
+  )
+
+  let candidate = encodedMatch?.[1] ?? plainMatch?.[1]
+
+  if (candidate) {
+    try {
+      candidate = decodeURIComponent(candidate)
+    } catch {
+      candidate = undefined
+    }
   }
 
-  try {
-    return (await response.json()) as T
-  } catch {
-    throw new ApiError('La réponse du serveur est illisible.', {
-      status: response.status,
-      code: 'invalid_server_response',
+  const safeName = candidate
+    ?.replace(/[\\/]/g, '')
+    .split('')
+    .filter((character) => {
+      const codePoint = character.codePointAt(0) ?? 0
+      return codePoint >= 32 && codePoint !== 127
     })
-  }
+    .join('')
+    .trim()
+
+  return safeName && safeName !== '.' && safeName !== '..'
+    ? safeName
+    : fallbackFileName
 }
 
 async function fetchCsrfToken(): Promise<string> {

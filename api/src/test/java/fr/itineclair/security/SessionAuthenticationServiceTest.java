@@ -2,6 +2,9 @@ package fr.itineclair.security;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+
+import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,8 +43,10 @@ class SessionAuthenticationServiceTest {
     @Mock private SessionAuthenticationStrategy sessionAuthenticationStrategy;
     @Mock private SecurityContextRepository securityContextRepository;
     @Mock private SecurityContextHolderStrategy securityContextHolderStrategy;
+    @Mock private AccountSessionRegistry accountSessionRegistry;
     @Mock private HttpServletRequest request;
     @Mock private HttpServletResponse response;
+    @Mock private HttpSession session;
     @Mock private SecurityContext securityContext;
 
     private SessionAuthenticationService sessionAuthenticationService;
@@ -52,18 +57,23 @@ class SessionAuthenticationServiceTest {
                 authenticationManager,
                 sessionAuthenticationStrategy,
                 securityContextRepository,
-                securityContextHolderStrategy);
+                securityContextHolderStrategy,
+                accountSessionRegistry);
     }
 
     @Test
     void authenticatesAndPersistsSecurityContext() {
         AccountPrincipal principal = mock(AccountPrincipal.class);
+        UUID accountId = UUID.fromString(
+                "936dd470-a45c-46fa-a0bd-94a76e4b836a");
         Authentication authenticated = mock(Authentication.class);
         given(authenticated.getPrincipal()).willReturn(principal);
+        given(principal.id()).willReturn(accountId);
         given(authenticationManager.authenticate(any(Authentication.class)))
                 .willReturn(authenticated);
         given(securityContextHolderStrategy.createEmptyContext())
                 .willReturn(securityContext);
+        given(request.getSession()).willReturn(session);
 
         AccountPrincipal result = sessionAuthenticationService.authenticate(
                 "  Victor@Example.Test  ", RAW_PASSWORD, request, response);
@@ -75,7 +85,8 @@ class SessionAuthenticationServiceTest {
                 sessionAuthenticationStrategy,
                 securityContext,
                 securityContextHolderStrategy,
-                securityContextRepository);
+                securityContextRepository,
+                accountSessionRegistry);
         order.verify(authenticationManager).authenticate(authenticationRequest.capture());
         order.verify(sessionAuthenticationStrategy)
                 .onAuthentication(authenticated, request, response);
@@ -83,6 +94,7 @@ class SessionAuthenticationServiceTest {
         order.verify(securityContextHolderStrategy).setContext(securityContext);
         order.verify(securityContextRepository)
                 .saveContext(securityContext, request, response);
+        order.verify(accountSessionRegistry).register(accountId, session);
 
         assertThat(authenticationRequest.getValue().getPrincipal())
                 .isEqualTo("victor@example.test");
@@ -103,7 +115,8 @@ class SessionAuthenticationServiceTest {
         verifyNoInteractions(
                 sessionAuthenticationStrategy,
                 securityContextRepository,
-                securityContextHolderStrategy);
+                securityContextHolderStrategy,
+                accountSessionRegistry);
     }
 
     @Test
@@ -118,7 +131,8 @@ class SessionAuthenticationServiceTest {
         verifyNoInteractions(
                 sessionAuthenticationStrategy,
                 securityContextRepository,
-                securityContextHolderStrategy);
+                securityContextHolderStrategy,
+                accountSessionRegistry);
     }
 
     @Test
@@ -133,6 +147,7 @@ class SessionAuthenticationServiceTest {
         verifyNoInteractions(
                 sessionAuthenticationStrategy,
                 securityContextRepository,
-                securityContextHolderStrategy);
+                securityContextHolderStrategy,
+                accountSessionRegistry);
     }
 }

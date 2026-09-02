@@ -8,7 +8,8 @@ import {
 } from 'react'
 
 import { ApiError } from '../api/api-client'
-import { logout } from '../auth/auth-api'
+import { logout, type Account } from '../auth/auth-api'
+import { AccountDataPanel } from '../privacy/AccountDataPanel'
 import { TrackReport } from './TrackReport'
 import {
   formatCoverage,
@@ -31,8 +32,10 @@ import {
 const MAXIMUM_FILE_SIZE_BYTES = 10 * 1024 * 1024
 
 export function TrackDashboard({
+  account,
   onLoggedOut,
 }: {
+  account: Account
   onLoggedOut: () => void
 }) {
   const inputId = useId()
@@ -408,6 +411,12 @@ export function TrackDashboard({
           </ul>
         )}
       </section>
+
+      <AccountDataPanel
+        account={account}
+        onDeleted={onLoggedOut}
+        onUnauthorized={onLoggedOut}
+      />
 
       <section className="principles" aria-label="Garanties de l’import">
         <article>
