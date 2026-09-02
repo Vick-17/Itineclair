@@ -30,6 +30,10 @@ const issueOptions: { value: FeedbackIssue; label: string }[] = [
   { value: 'NAVIGATION', label: 'Orientation' },
   { value: 'EQUIPMENT', label: 'Équipement' },
 ]
+const effortOptions: { value: number | null; label: string }[] = [
+  { value: null, label: 'Non renseigné' },
+  ...[1, 2, 3, 4, 5].map((value) => ({ value, label: String(value) })),
+]
 
 export function TrackFeedbackPanel({ trackId, onUnauthorized }: {
   trackId: string
@@ -81,6 +85,11 @@ export function TrackFeedbackPanel({ trackId, onUnauthorized }: {
     }
   }
 
+  function clearStatus() {
+    setMessage(null)
+    setError(null)
+  }
+
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!outcome) return setError('Indique d’abord comment la sortie s’est terminée.')
@@ -114,7 +123,7 @@ export function TrackFeedbackPanel({ trackId, onUnauthorized }: {
     } finally { setPending(false) }
   }
 
-  const disabled = pending || outcome === 'NOT_STARTED'
+  const detailsDisabled = pending || outcome === 'NOT_STARTED'
   return <section className="track-feedback" aria-labelledby={`${id}-title`}>
     <div className="feedback-heading"><div>
       <p className="auth-kicker">Après la sortie · moins de 30 secondes</p>
@@ -128,21 +137,21 @@ export function TrackFeedbackPanel({ trackId, onUnauthorized }: {
             <input type="radio" name={`${id}-outcome`} checked={outcome === option.value} onChange={() => chooseOutcome(option.value)} required />
             <strong>{option.label}</strong></label>)}</div>
         </fieldset>
-        <div className="feedback-details" aria-disabled={disabled}>
+        <div className="feedback-details" aria-disabled={detailsDisabled}>
           <label className="feedback-duration"><span>Durée réelle en minutes <small>(facultatif)</small></span>
-            <input type="number" min={1} max={1440} step={15} value={duration} onChange={(e) => setDuration(e.target.value)} disabled={disabled} /></label>
-          <fieldset className="feedback-fieldset" disabled={disabled}><legend>Effort ressenti <small>(facultatif)</small></legend>
-            <div className="feedback-scale">{[1,2,3,4,5].map((value) => <label key={value}><input type="radio" name={`${id}-effort`} checked={effort === value} onChange={() => setEffort(value)} /><span>{value}</span></label>)}</div>
+            <input type="number" min={1} max={1440} step={1} value={duration} onChange={(event) => { clearStatus(); setDuration(event.target.value) }} disabled={detailsDisabled} /></label>
+          <fieldset className="feedback-fieldset" disabled={detailsDisabled}><legend>Effort ressenti <small>(facultatif)</small></legend>
+            <div className="feedback-scale">{effortOptions.map((option) => <label key={option.label}><input type="radio" name={`${id}-effort`} checked={effort === option.value} onChange={() => { clearStatus(); setEffort(option.value) }} /><span>{option.label}</span></label>)}</div>
           </fieldset>
-          <fieldset className="feedback-fieldset" disabled={disabled}><legend>Conditions rencontrées</legend><div className="feedback-inline-options">
-            {conditions.map((option) => <label key={option.value}><input type="radio" name={`${id}-conditions`} checked={comparison === option.value} onChange={() => setComparison(option.value)} /><span>{option.label}</span></label>)}</div></fieldset>
-          <fieldset className="feedback-fieldset" disabled={disabled}><legend>Difficultés observées <small>(facultatif)</small></legend><div className="feedback-inline-options">
-            {issueOptions.map((option) => <label key={option.value}><input type="checkbox" checked={issues.includes(option.value)} onChange={(e) => setIssues((old) => e.target.checked ? [...old, option.value] : old.filter((item) => item !== option.value))} /><span>{option.label}</span></label>)}</div></fieldset>
+          <fieldset className="feedback-fieldset" disabled={detailsDisabled}><legend>Conditions rencontrées</legend><div className="feedback-inline-options">
+            {conditions.map((option) => <label key={option.value}><input type="radio" name={`${id}-conditions`} checked={comparison === option.value} onChange={() => { clearStatus(); setComparison(option.value) }} /><span>{option.label}</span></label>)}</div></fieldset>
+          <fieldset className="feedback-fieldset" disabled={detailsDisabled}><legend>Difficultés observées <small>(facultatif)</small></legend><div className="feedback-inline-options">
+            {issueOptions.map((option) => <label key={option.value}><input type="checkbox" checked={issues.includes(option.value)} onChange={(event) => { clearStatus(); setIssues((old) => event.target.checked ? [...old, option.value] : old.filter((item) => item !== option.value)) }} /><span>{option.label}</span></label>)}</div></fieldset>
         </div>
         {error && <div className="form-alert" role="alert"><span>!</span><p>{error}</p></div>}
         {message && <div className="success-alert" role="status"><span>✓</span><p>{message}</p></div>}
         <div className="feedback-actions">{feedback && <button className="feedback-delete" type="button" onClick={remove} disabled={pending}>Supprimer mon retour</button>}
-          <button className="primary-button feedback-save" disabled={pending}>{feedback ? 'Mettre à jour mon retour' : 'Enregistrer mon retour'}</button></div>
+          <button className="primary-button feedback-save" type="submit" disabled={pending}>{feedback ? 'Mettre à jour mon retour' : 'Enregistrer mon retour'}</button></div>
       </form>}
   </section>
 }
