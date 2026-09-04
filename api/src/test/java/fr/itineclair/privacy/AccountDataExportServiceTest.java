@@ -94,7 +94,9 @@ class AccountDataExportServiceTest {
         String manifest = entries.getFirst().content();
         assertThat(manifest)
                 .contains("itineclair-account-export")
+                .contains("\"schemaVersion\":2")
                 .contains("victor@example.test")
+                .contains("EXPERIENCED")
                 .contains("COMPLETED_AS_PLANNED")
                 .contains("WEATHER")
                 .doesNotContain(PASSWORD)
@@ -155,6 +157,13 @@ class AccountDataExportServiceTest {
                         ACCOUNT_ID,
                         "victor@example.test",
                         NOW.minusSeconds(86_400)),
+                new AccountExportSnapshot.HikerProfile(
+                        "EXPERIENCED",
+                        360,
+                        14_000,
+                        900,
+                        NOW.minusSeconds(43_200),
+                        NOW.minusSeconds(3_600)),
                 List.of(track));
     }
 

@@ -8,11 +8,12 @@ public record AccountDataExportManifest(
         int schemaVersion,
         Instant exportedAt,
         AccountExportSnapshot.Account account,
+        AccountExportSnapshot.HikerProfile hikerProfile,
         List<AccountExportSnapshot.Track> tracks,
         List<String> notes) {
 
     private static final String FORMAT = "itineclair-account-export";
-    private static final int SCHEMA_VERSION = 1;
+    private static final int SCHEMA_VERSION = 2;
 
     public AccountDataExportManifest {
         tracks = List.copyOf(tracks);
@@ -26,6 +27,7 @@ public record AccountDataExportManifest(
                 SCHEMA_VERSION,
                 preparedExport.exportedAt(),
                 preparedExport.snapshot().account(),
+                preparedExport.snapshot().hikerProfile(),
                 preparedExport.snapshot().tracks(),
                 List.of(
                         "Les fichiers GPX sont reconstruits à partir "

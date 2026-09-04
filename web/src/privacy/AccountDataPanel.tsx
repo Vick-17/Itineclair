@@ -105,7 +105,8 @@ export function AccountDataPanel({
             <h3>Exporter mes données</h3>
             <p>
               Télécharge un ZIP avec un manifeste JSON, tes informations de
-              compte, tes préparations, tes retours et un GPX par trace.
+              compte, ton profil de pratique, tes préparations, tes retours et
+              un GPX par trace.
             </p>
             <p className="account-data-note">
               Les GPX sont reconstruits à partir des points conservés : les
@@ -148,7 +149,8 @@ export function AccountDataPanel({
             <h3>Supprimer définitivement mon compte</h3>
             <p>
               Cette action efface le compte, toutes les traces, les points,
-              les contextes météo, les retours et les partages privés.
+              ton profil de pratique, les contextes météo, les retours et les
+              partages privés.
             </p>
             <p className="account-data-note">
               Télécharge d’abord ton archive si tu souhaites conserver une

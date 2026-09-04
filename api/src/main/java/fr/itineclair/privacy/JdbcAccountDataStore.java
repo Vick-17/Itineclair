@@ -23,6 +23,18 @@ class JdbcAccountDataStore implements AccountDataStore {
             WHERE id = ?
             """;
 
+    private static final String SELECT_HIKER_PROFILE_SQL = """
+            SELECT
+                experience_level,
+                usual_duration_minutes,
+                usual_distance_meters,
+                usual_elevation_gain_meters,
+                created_at,
+                updated_at
+            FROM hiker_profiles
+            WHERE account_id = ?
+            """;
+
     private static final String SELECT_TRACKS_SQL = """
             SELECT
                 t.id,
@@ -128,6 +140,8 @@ class JdbcAccountDataStore implements AccountDataStore {
             return Optional.empty();
         }
 
+        AccountExportSnapshot.HikerProfile hikerProfile =
+                loadHikerProfile(accountId);
         Map<UUID, List<String>> issues = loadFeedbackIssues(accountId);
 
         List<AccountExportSnapshot.Track> tracks = jdbcTemplate.query(
@@ -137,6 +151,7 @@ class JdbcAccountDataStore implements AccountDataStore {
 
         return Optional.of(new AccountExportSnapshot(
                 accounts.getFirst(),
+                hikerProfile,
                 tracks));
     }
 
@@ -161,6 +176,31 @@ class JdbcAccountDataStore implements AccountDataStore {
     @Override
     public int deleteAccount(UUID accountId) {
         return jdbcTemplate.update(DELETE_ACCOUNT_SQL, accountId);
+    }
+
+    private AccountExportSnapshot.HikerProfile loadHikerProfile(
+            UUID accountId) {
+        List<AccountExportSnapshot.HikerProfile> profiles =
+                jdbcTemplate.query(
+                        SELECT_HIKER_PROFILE_SQL,
+                        (resultSet, rowNumber) ->
+                                new AccountExportSnapshot.HikerProfile(
+                                        resultSet.getString(
+                                                "experience_level"),
+                                        nullableInteger(
+                                                resultSet,
+                                                "usual_duration_minutes"),
+                                        nullableInteger(
+                                                resultSet,
+                                                "usual_distance_meters"),
+                                        nullableInteger(
+                                                resultSet,
+                                                "usual_elevation_gain_meters"),
+                                        instant(resultSet, "created_at"),
+                                        instant(resultSet, "updated_at")),
+                        accountId);
+
+        return profiles.isEmpty() ? null : profiles.getFirst();
     }
 
     private Map<UUID, List<String>> loadFeedbackIssues(UUID accountId) {

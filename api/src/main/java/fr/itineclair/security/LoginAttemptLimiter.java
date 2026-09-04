@@ -10,6 +10,7 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.function.LongSupplier;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.github.benmanes.caffeine.cache.Cache;
@@ -28,6 +29,7 @@ public class LoginAttemptLimiter {
     private final Cache<String, SlidingWindowCounter> accountIpAttempts;
     private final Cache<String, SlidingWindowCounter> accountAttempts;
 
+    @Autowired
     public LoginAttemptLimiter(LoginProtectionProperties properties) {
         this(properties, System::nanoTime);
     }
