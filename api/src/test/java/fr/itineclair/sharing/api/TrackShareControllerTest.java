@@ -120,7 +120,9 @@ class TrackShareControllerTest {
                 .andExpect(jsonPath("$.analysis.ruleSetVersion")
                         .value(1))
                 .andExpect(jsonPath("$.privacy.excludedData.length()")
-                        .value(4))
+                        .value(5))
+                .andExpect(content().string(
+                        not(containsString("experienceLevel"))))
                 .andExpect(content().string(
                         not(containsString("maison-secrete.gpx"))))
                 .andExpect(content().string(

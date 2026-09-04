@@ -6,6 +6,7 @@ import java.util.UUID;
 
 public record AccountExportSnapshot(
         Account account,
+        HikerProfile hikerProfile,
         List<Track> tracks) {
 
     public AccountExportSnapshot {
@@ -16,6 +17,15 @@ public record AccountExportSnapshot(
             UUID id,
             String email,
             Instant createdAt) {
+    }
+
+    public record HikerProfile(
+            String experienceLevel,
+            Integer usualDurationMinutes,
+            Integer usualDistanceMeters,
+            Integer usualElevationGainMeters,
+            Instant createdAt,
+            Instant updatedAt) {
     }
 
     public record Track(

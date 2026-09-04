@@ -34,7 +34,8 @@ public record SharedTrackReportResponse(
             "Identité et adresse e-mail du propriétaire",
             "Fichier GPX, coordonnées et géométrie du parcours",
             "Nom du fichier, identifiants et date d’import",
-            "Retour personnel post-sortie");
+            "Retour personnel post-sortie",
+            "Profil et repères de pratique du propriétaire");
 
     static SharedTrackReportResponse from(SharedTrackReport report) {
         return new SharedTrackReportResponse(

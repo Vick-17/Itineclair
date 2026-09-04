@@ -247,6 +247,7 @@ class AccountPrivacyControllerTest {
                                 ACCOUNT_ID,
                                 "victor@example.test",
                                 NOW.minusSeconds(86_400)),
+                        null,
                         List.of()));
     }
 

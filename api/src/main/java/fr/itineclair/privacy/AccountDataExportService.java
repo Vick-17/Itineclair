@@ -18,6 +18,7 @@ import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,6 +43,7 @@ public class AccountDataExportService {
     private final Clock clock;
     private final XMLOutputFactory xmlOutputFactory;
 
+    @Autowired
     public AccountDataExportService(
             AccountDataStore accountDataStore,
             CurrentPasswordVerifier currentPasswordVerifier,

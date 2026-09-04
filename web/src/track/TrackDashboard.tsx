@@ -10,6 +10,7 @@ import {
 import { ApiError } from '../api/api-client'
 import { logout, type Account } from '../auth/auth-api'
 import { AccountDataPanel } from '../privacy/AccountDataPanel'
+import { HikerProfilePanel } from '../profile/HikerProfilePanel'
 import { TrackReport } from './TrackReport'
 import {
   formatCoverage,
@@ -256,6 +257,8 @@ export function TrackDashboard({
           <p>{successMessage}</p>
         </div>
       )}
+
+      <HikerProfilePanel onUnauthorized={onLoggedOut} />
 
       <section className="empty-state upload-state" aria-labelledby="upload-title">
         <div className="empty-map" aria-hidden="true">
