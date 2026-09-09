@@ -55,3 +55,15 @@ réinitialiser aussi ces données :
 ```bash
 docker compose down --volumes
 ```
+
+## Préparer une bêta privée
+
+La stack de production, le HTTPS, les sauvegardes, le test de fumée et les
+critères de mise en ligne sont décrits dans :
+
+- [`docs/production-runbook.md`](docs/production-runbook.md) ;
+- [`docs/mvp-release-checklist.md`](docs/mvp-release-checklist.md).
+
+Tant que les risques physiques ouverts dans le registre ne sont pas traités,
+Itinéclair doit rester une démonstration ou une bêta privée encadrée, jamais un
+service présenté comme donnant une autorisation de partir.

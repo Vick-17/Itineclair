@@ -26,7 +26,7 @@ jobs:
 
     steps:
       - name: Récupérer le dépôt
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Installer Java 25
         uses: actions/setup-java@v6
@@ -49,7 +49,7 @@ jobs:
 
     steps:
       - name: Récupérer le dépôt
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Installer Node.js 24
         uses: actions/setup-node@v7
@@ -67,5 +67,55 @@ jobs:
       - name: Tester le client HTTP
         run: npm test
 
-      - name: Construire la PWA
+      - name: Construire le client web
         run: npm run build
+
+  production-smoke:
+    name: Production — smoke test
+    runs-on: ubuntu-latest
+    needs:
+      - api
+      - web
+    timeout-minutes: 20
+
+    env:
+      BIND_ADDRESS: 127.0.0.1
+      HTTP_PORT: "18080"
+      POSTGRES_DB: itineclair_ci
+      POSTGRES_USER: itineclair_ci
+      POSTGRES_PASSWORD: ci-only-password-never-used-outside-this-job
+      ITINECLAIR_WEATHER_ENABLED: "false"
+
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v7
+
+      - name: Installer Node.js 24
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - name: Valider la configuration de production
+        run: docker compose --file compose.prod.yaml config --quiet
+
+      - name: Construire et démarrer la stack de production
+        run: >-
+          docker compose --file compose.prod.yaml up
+          --build
+          --detach
+          --wait
+          --wait-timeout 240
+
+      - name: Tester le parcours MVP complet
+        run: node scripts/mvp-smoke.mjs http://127.0.0.1:18080/api
+
+      - name: Afficher les journaux en cas d’échec
+        if: failure()
+        run: docker compose --file compose.prod.yaml logs --no-color
+
+      - name: Détruire la stack de test
+        if: always()
+        run: >-
+          docker compose --file compose.prod.yaml down
+          --volumes
+          --remove-orphans
