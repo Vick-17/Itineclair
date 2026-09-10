@@ -1,6 +1,6 @@
 # Export et suppression des données du compte
 
-Dernière revue : 2026-09-01.
+Dernière revue : 2026-09-09.
 
 ## Périmètre MVP
 
@@ -22,9 +22,10 @@ Les coordonnées, GPX, adresses, mots de passe et jetons ne doivent pas être
 ## Contenu de l’archive
 
 Le fichier `manifest.json` utilise le format versionné
-`itineclair-account-export`, version de schéma `1`. Il contient :
+`itineclair-account-export`, version de schéma `2`. Il contient :
 
 - l’identifiant, l’adresse e-mail et la date de création du compte ;
+- le profil randonneur facultatif et ses repères de pratique ;
 - les métadonnées et faits calculés de chaque trace ;
 - les plans, consentements et instantanés météo conservés ;
 - les retours post-sortie structurés et leurs catégories ;
@@ -45,7 +46,9 @@ Sont volontairement absents : hash du mot de passe, hash ou jeton de partage,
 La suppression retire la ligne `user_accounts` dans une transaction. Les clés
 étrangères PostgreSQL avec `ON DELETE CASCADE` effacent ensuite les traces,
 points, faits associés, contextes extérieurs, retours et partages. Aucune
-migration supplémentaire n’est nécessaire.
+migration supplémentaire n’est nécessaire. La migration
+`V8__add_hiker_profiles.sql` utilise elle aussi `ON DELETE CASCADE` pour
+supprimer le profil randonneur avec son compte.
 
 Après succès, le serveur invalide toutes les sessions actives connues pour le
 compte, puis expire explicitement dans la réponse courante :

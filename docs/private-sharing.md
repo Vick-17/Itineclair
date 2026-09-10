@@ -1,6 +1,6 @@
 # Partage privé d’un rapport
 
-Dernière revue : 2026-09-01.
+Dernière revue : 2026-09-09.
 
 ## Périmètre MVP
 
@@ -26,7 +26,7 @@ lien actif par trace dans le MVP.
 | Faits agrégés : distance, dénivelés, altitude, pente et couverture | Identité, e-mail et identifiant du compte |
 | Horaire planifié, lumière et agrégats météo déjà consentis | Fichier source, points GPX, coordonnées et géométrie |
 | Signaux explicables, preuves numériques, checklist et limites | Nom du fichier, identifiants techniques et date d’import |
-| Source et fraîcheur de la météo | Retour personnel post-sortie |
+| Source et fraîcheur de la météo | Retour personnel post-sortie, profil randonneur et repères de pratique |
 
 Le titre issu du GPX est également exclu : il pourrait contenir un nom de lieu
 privé ou une mention comme « départ maison ».
