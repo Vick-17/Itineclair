@@ -8,9 +8,10 @@ import {
 } from 'react'
 
 import { ApiError } from '../api/api-client'
-import { logout, type Account } from '../auth/auth-api'
-import { AccountDataPanel } from '../privacy/AccountDataPanel'
-import { HikerProfilePanel } from '../profile/HikerProfilePanel'
+import type { Account } from '../auth/auth-api'
+import { WorkspaceAccount } from '../workspace/WorkspaceAccount'
+import { WorkspaceHome } from '../workspace/WorkspaceHome'
+import type { WorkspaceSection } from '../workspace/workspace-route'
 import { TrackReport } from './TrackReport'
 import {
   formatCoverage,
@@ -34,26 +35,40 @@ const MAXIMUM_FILE_SIZE_BYTES = 10 * 1024 * 1024
 
 export function TrackDashboard({
   account,
+  section,
+  reportVisible,
+  onNavigate,
+  onReportVisibilityChange,
   onLoggedOut,
 }: {
   account: Account
+  section: WorkspaceSection
+  reportVisible: boolean
+  onNavigate: (section: WorkspaceSection) => void
+  onReportVisibilityChange: (visible: boolean) => void
   onLoggedOut: () => void
 }) {
   const inputId = useId()
   const inputRef = useRef<HTMLInputElement>(null)
+  const activeSectionRef = useRef(section)
   const [tracks, setTracks] = useState<Track[]>([])
   const [reportTrack, setReportTrack] = useState<Track | null>(null)
   const [reportOutdoorContext, setReportOutdoorContext] =
     useState<OutdoorContext | null>(null)
   const [reportAnalysis, setReportAnalysis] =
     useState<TrackAnalysis | null>(null)
+  const [reportReturnSection, setReportReturnSection] =
+    useState<WorkspaceSection>('outings')
   const [openingTrackId, setOpeningTrackId] = useState<string | null>(null)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [loadingTracks, setLoadingTracks] = useState(true)
   const [uploading, setUploading] = useState(false)
-  const [loggingOut, setLoggingOut] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
+
+  useEffect(() => {
+    activeSectionRef.current = section
+  }, [section])
 
   useEffect(() => {
     let active = true
@@ -140,9 +155,7 @@ export function TrackDashboard({
     try {
       const imported = await importTrack(selectedFile)
       setTracks((currentTracks) => [imported, ...currentTracks])
-      setSuccessMessage(
-        `« ${imported.name} » a été importée avec ${imported.pointCount.toLocaleString('fr-FR')} points.`,
-      )
+      setSuccessMessage(`« ${imported.name} » a bien été ajoutée.`)
       setSelectedFile(null)
       resetInput()
     } catch (error: unknown) {
@@ -157,20 +170,8 @@ export function TrackDashboard({
     }
   }
 
-  async function handleLogout() {
-    setLoggingOut(true)
-    setErrorMessage(null)
-
-    try {
-      await logout()
-      onLoggedOut()
-    } catch (error: unknown) {
-      setErrorMessage(messageForError(error))
-      setLoggingOut(false)
-    }
-  }
-
   async function handleOpenReport(trackId: string) {
+    const requestedSection = section
     setOpeningTrackId(trackId)
     setErrorMessage(null)
 
@@ -180,9 +181,16 @@ export function TrackDashboard({
         getOutdoorContext(trackId),
         getTrackAnalysis(trackId),
       ])
+
+      if (activeSectionRef.current !== requestedSection) {
+        return
+      }
+
+      setReportReturnSection(requestedSection)
       setReportTrack(detailedTrack)
       setReportOutdoorContext(outdoorContext)
       setReportAnalysis(analysis)
+      onReportVisibilityChange(true)
     } catch (error: unknown) {
       if (error instanceof ApiError && error.status === 401) {
         onLoggedOut()
@@ -195,13 +203,21 @@ export function TrackDashboard({
     }
   }
 
+  function closeReport() {
+    setReportTrack(null)
+    setReportOutdoorContext(null)
+    setReportAnalysis(null)
+    onReportVisibilityChange(false)
+    onNavigate(reportReturnSection)
+  }
+
   function resetInput() {
     if (inputRef.current) {
       inputRef.current.value = ''
     }
   }
 
-  if (reportTrack && reportAnalysis) {
+  if (reportVisible && reportTrack && reportAnalysis) {
     return (
       <TrackReport
         track={reportTrack}
@@ -210,234 +226,241 @@ export function TrackDashboard({
         onOutdoorContextChange={setReportOutdoorContext}
         onAnalysisChange={setReportAnalysis}
         onUnauthorized={onLoggedOut}
-        onBack={() => {
-          setReportTrack(null)
-          setReportOutdoorContext(null)
-          setReportAnalysis(null)
-        }}
+        onBack={closeReport}
       />
     )
   }
 
   return (
-    <div className="dashboard">
-      <section className="dashboard-heading">
-        <div>
-          <p className="eyebrow">
-            <span aria-hidden="true">●</span>
-            Espace personnel
-          </p>
-          <h1>Prépare ta prochaine sortie.</h1>
-          <p>
-            Importe une trace GPX privée. Itinéclair vérifie sa structure et
-            conserve ses segments avant d’en calculer les faits utiles.
-          </p>
-        </div>
+    <div className="workspace-root">
+      {section !== 'account' && (errorMessage || successMessage) && (
+        <div className="workspace-notices">
+          {errorMessage && (
+            <div className="form-alert dashboard-alert" role="alert">
+              <span aria-hidden="true">!</span>
+              <p>{errorMessage}</p>
+            </div>
+          )}
 
-        <button
-          className="secondary-button"
-          type="button"
-          onClick={handleLogout}
-          disabled={loggingOut || uploading}
+          {successMessage && (
+            <div className="success-alert dashboard-alert" role="status">
+              <span aria-hidden="true">✓</span>
+              <p>{successMessage}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {section === 'home' && (
+        <WorkspaceHome
+          recentTrack={tracks[0] ?? null}
+          loading={loadingTracks}
+          openingTrackId={openingTrackId}
+          onPrepare={() => onNavigate('outings')}
+          onOpenReport={handleOpenReport}
+          onViewOutings={() => onNavigate('outings')}
+        />
+      )}
+
+      {section === 'outings' && (
+        <section
+          className="workspace-page workspace-outings"
+          aria-labelledby="workspace-outings-title"
         >
-          {loggingOut ? 'Déconnexion…' : 'Se déconnecter'}
-        </button>
-      </section>
+          <header className="workspace-page-heading">
+            <div>
+              <p className="workspace-kicker">Bibliothèque privée</p>
+              <h1 id="workspace-outings-title">Mes sorties</h1>
+              <p>
+                Ajoute une trace GPX ou retrouve une préparation déjà
+                enregistrée.
+              </p>
+            </div>
 
-      {errorMessage && (
-        <div className="form-alert dashboard-alert" role="alert">
-          <span aria-hidden="true">!</span>
-          <p>{errorMessage}</p>
-        </div>
-      )}
+            <span className="workspace-count">
+              {tracks.length} trace{tracks.length > 1 ? 's' : ''}
+            </span>
+          </header>
 
-      {successMessage && (
-        <div className="success-alert dashboard-alert" role="status">
-          <span aria-hidden="true">✓</span>
-          <p>{successMessage}</p>
-        </div>
-      )}
+          <section
+            className="empty-state upload-state"
+            aria-labelledby="upload-title"
+          >
+            <div className="empty-map" aria-hidden="true">
+              <svg viewBox="0 0 240 180">
+                <path d="M9 145c28-52 48-31 71-79 20-41 44 47 67 4 21-38 42 3 84-46" />
+                <path d="M7 120c24-38 50-20 66-57 20-46 48 50 71 2 22-45 47 0 88-50" />
+                <circle cx="10" cy="145" r="5" />
+                <circle cx="231" cy="24" r="5" />
+              </svg>
+            </div>
 
-      <HikerProfilePanel onUnauthorized={onLoggedOut} />
+            <div className="empty-copy">
+              <span className="step-badge">Nouvelle préparation</span>
+              <h2 id="upload-title">Ajouter une trace GPX</h2>
+              <p>
+                Choisis le fichier du parcours que tu veux préparer. Il reste
+                privé et doit peser moins de 10 Mo.
+              </p>
 
-      <section className="empty-state upload-state" aria-labelledby="upload-title">
-        <div className="empty-map" aria-hidden="true">
-          <svg viewBox="0 0 240 180">
-            <path d="M9 145c28-52 48-31 71-79 20-41 44 47 67 4 21-38 42 3 84-46" />
-            <path d="M7 120c24-38 50-20 66-57 20-46 48 50 71 2 22-45 47 0 88-50" />
-            <circle cx="10" cy="145" r="5" />
-            <circle cx="231" cy="24" r="5" />
-          </svg>
-        </div>
+              <form className="gpx-form" onSubmit={handleImport}>
+                <label
+                  className="gpx-dropzone"
+                  htmlFor={inputId}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={handleDrop}
+                >
+                  <input
+                    ref={inputRef}
+                    className="visually-hidden"
+                    id={inputId}
+                    type="file"
+                    accept=".gpx,application/gpx+xml,application/xml,text/xml"
+                    onChange={(event) =>
+                      chooseFile(event.currentTarget.files?.item(0) ?? null)
+                    }
+                    disabled={uploading}
+                  />
 
-        <div className="empty-copy">
-          <span className="step-badge">Import sécurisé</span>
-          <h2 id="upload-title">Ajouter une trace GPX</h2>
-          <p>
-            GPX 1.0 ou 1.1, 10 Mo maximum et 50 000 points. Les fichiers XML
-            externes et les entités DTD sont refusés.
-          </p>
+                  <span className="dropzone-icon" aria-hidden="true">
+                    ↥
+                  </span>
 
-          <form className="gpx-form" onSubmit={handleImport}>
-            <label
-              className="gpx-dropzone"
-              htmlFor={inputId}
-              onDragOver={(event) => event.preventDefault()}
-              onDrop={handleDrop}
-            >
-              <input
-                ref={inputRef}
-                className="visually-hidden"
-                id={inputId}
-                type="file"
-                accept=".gpx,application/gpx+xml,application/xml,text/xml"
-                onChange={(event) =>
-                  chooseFile(event.currentTarget.files?.item(0) ?? null)
-                }
-                disabled={uploading}
-              />
-              <span className="dropzone-icon" aria-hidden="true">↥</span>
-              <span>
-                <strong>
-                  {selectedFile
-                    ? selectedFile.name
-                    : 'Choisir ou déposer un fichier'}
-                </strong>
-                <small>
-                  {selectedFile
-                    ? formatFileSize(selectedFile.size)
-                    : 'Le fichier original ne sera pas exposé publiquement.'}
-                </small>
-              </span>
-            </label>
+                  <span>
+                    <strong>
+                      {selectedFile
+                        ? selectedFile.name
+                        : 'Choisir ou déposer un fichier'}
+                    </strong>
+                    <small>
+                      {selectedFile
+                        ? formatFileSize(selectedFile.size)
+                        : 'Format .gpx · 10 Mo maximum'}
+                    </small>
+                  </span>
+                </label>
 
-            <button
-              className="primary-button"
-              type="submit"
-              disabled={uploading || !selectedFile}
-            >
-              {uploading && (
-                <span className="button-spinner" aria-hidden="true" />
-              )}
-              {uploading ? 'Analyse du fichier…' : 'Importer la trace'}
-            </button>
-          </form>
-        </div>
-      </section>
-
-      <section className="track-library" aria-labelledby="tracks-title">
-        <div className="track-library-heading">
-          <div>
-            <p className="auth-kicker">Bibliothèque privée</p>
-            <h2 id="tracks-title">Mes traces</h2>
-          </div>
-          <span>
-            {tracks.length} trace{tracks.length > 1 ? 's' : ''}
-          </span>
-        </div>
-
-        {loadingTracks && (
-          <p className="library-status" aria-live="polite">
-            Chargement des traces…
-          </p>
-        )}
-
-        {!loadingTracks && tracks.length === 0 && (
-          <div className="library-status library-empty">
-            <strong>Aucune trace enregistrée</strong>
-            <p>Ton premier import apparaîtra ici et restera lié à ton compte.</p>
-          </div>
-        )}
-
-        {tracks.length > 0 && (
-          <ul className="track-grid">
-            {tracks.map((track) => (
-              <li key={track.id}>
-                <article className="track-card">
-                  <div className="track-card-top">
-                    <span className="track-symbol" aria-hidden="true">⌁</span>
-                    <time dateTime={track.createdAt}>
-                      {formatDate(track.createdAt)}
-                    </time>
-                  </div>
-                  <h3>{track.name}</h3>
-                  <p className="track-filename">{track.sourceFilename}</p>
-                  {track.facts ? (
-                    <>
-                      <dl>
-                        <div>
-                          <dt>Distance</dt>
-                          <dd>{formatDistance(track.facts.distanceMeters)}</dd>
-                        </div>
-                        <div>
-                          <dt>D+ GPX</dt>
-                          <dd>{formatMeters(track.facts.elevationGainMeters)}</dd>
-                        </div>
-                        <div>
-                          <dt>Altitudes</dt>
-                          <dd>{formatElevationRange(track.facts)}</dd>
-                        </div>
-                        <div>
-                          <dt
-                            title={`Pentes calculées sur au moins ${track.facts.gradeMinimumRunMeters} mètres`}
-                          >
-                            Pentes max
-                          </dt>
-                          <dd>{formatMaximumGrades(track.facts)}</dd>
-                        </div>
-                      </dl>
-                      <p className="track-coverage">
-                        {formatCoverage(track)}
-                      </p>
-                    </>
-                  ) : (
-                    <div className="track-facts-unavailable">
-                      <strong>Calcul en attente</strong>
-                      <span>Les points seront analysés à la prochaine consultation.</span>
-                    </div>
+                <button
+                  className="primary-button"
+                  type="submit"
+                  disabled={uploading || !selectedFile}
+                >
+                  {uploading && (
+                    <span className="button-spinner" aria-hidden="true" />
                   )}
-                  <button
-                    className="track-report-button"
-                    type="button"
-                    onClick={() => handleOpenReport(track.id)}
-                    disabled={openingTrackId !== null}
-                    aria-label={`Ouvrir le rapport de ${track.name}`}
-                  >
-                    {openingTrackId === track.id
-                      ? 'Ouverture…'
-                      : 'Rapport et retour terrain'}
-                    <span aria-hidden="true">→</span>
-                  </button>
-                </article>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+                  {uploading ? 'Vérification du fichier…' : 'Ajouter la trace'}
+                </button>
+              </form>
+            </div>
+          </section>
 
-      <AccountDataPanel
-        account={account}
-        onDeleted={onLoggedOut}
-        onUnauthorized={onLoggedOut}
-      />
+          <section className="track-library" aria-labelledby="tracks-title">
+            <div className="track-library-heading">
+              <div>
+                <p className="auth-kicker">Toutes les traces</p>
+                <h2 id="tracks-title">Préparations enregistrées</h2>
+              </div>
+            </div>
 
-      <section className="principles" aria-label="Garanties de l’import">
-        <article>
-          <span>01</span>
-          <h2>Fichier vérifié</h2>
-          <p>Le parseur bloque les constructions XML externes et les coordonnées invalides.</p>
-        </article>
-        <article>
-          <span>02</span>
-          <h2>Segments préservés</h2>
-          <p>Les ruptures de trace restent distinctes pour éviter de fausser les futurs calculs.</p>
-        </article>
-        <article>
-          <span>03</span>
-          <h2>Propriété isolée</h2>
-          <p>Chaque trace est rattachée au compte authentifié et listée uniquement pour lui.</p>
-        </article>
-      </section>
+            {loadingTracks && (
+              <p className="library-status" aria-live="polite">
+                Chargement des traces…
+              </p>
+            )}
+
+            {!loadingTracks && tracks.length === 0 && (
+              <div className="library-status library-empty">
+                <strong>Aucune trace enregistrée</strong>
+                <p>La première trace ajoutée apparaîtra ici.</p>
+              </div>
+            )}
+
+            {tracks.length > 0 && (
+              <ul className="track-grid">
+                {tracks.map((track) => (
+                  <li key={track.id}>
+                    <article className="track-card">
+                      <div className="track-card-top">
+                        <span className="track-symbol" aria-hidden="true">
+                          ⌁
+                        </span>
+                        <time dateTime={track.createdAt}>
+                          {formatDate(track.createdAt)}
+                        </time>
+                      </div>
+
+                      <h3>{track.name}</h3>
+                      <p className="track-filename">{track.sourceFilename}</p>
+
+                      {track.facts ? (
+                        <>
+                          <dl>
+                            <div>
+                              <dt>Distance</dt>
+                              <dd>
+                                {formatDistance(track.facts.distanceMeters)}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>Montée</dt>
+                              <dd>
+                                {formatMeters(
+                                  track.facts.elevationGainMeters,
+                                )}
+                              </dd>
+                            </div>
+                            <div>
+                              <dt>Altitudes</dt>
+                              <dd>{formatElevationRange(track.facts)}</dd>
+                            </div>
+                            <div>
+                              <dt
+                                title={`Pentes calculées sur au moins ${track.facts.gradeMinimumRunMeters} mètres`}
+                              >
+                                Pentes maximales
+                              </dt>
+                              <dd>{formatMaximumGrades(track.facts)}</dd>
+                            </div>
+                          </dl>
+
+                          <p className="track-coverage">
+                            {formatCoverage(track)}
+                          </p>
+                        </>
+                      ) : (
+                        <div className="track-facts-unavailable">
+                          <strong>Calcul en attente</strong>
+                          <span>
+                            Les faits seront calculés à la prochaine
+                            consultation.
+                          </span>
+                        </div>
+                      )}
+
+                      <button
+                        className="track-report-button"
+                        type="button"
+                        onClick={() => handleOpenReport(track.id)}
+                        disabled={openingTrackId !== null}
+                        aria-label={`Voir la préparation de ${track.name}`}
+                      >
+                        {openingTrackId === track.id
+                          ? 'Ouverture…'
+                          : 'Voir la préparation'}
+                        <span aria-hidden="true">→</span>
+                      </button>
+                    </article>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </section>
+      )}
+
+      {section === 'account' && (
+        <WorkspaceAccount account={account} onLoggedOut={onLoggedOut} />
+      )}
     </div>
   )
 }
@@ -459,7 +482,6 @@ function formatDate(value: string): string {
 
   return new Intl.DateTimeFormat('fr-FR', {
     dateStyle: 'medium',
-    timeStyle: 'short',
   }).format(date)
 }
 
