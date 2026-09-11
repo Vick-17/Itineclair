@@ -13,9 +13,13 @@
   --sand: #f0ede4;
   --white: #ffffff;
   --line: #d9ddd7;
+  --line-strong: #b9c2bb;
   --danger: #a63c2f;
   --danger-soft: #fff1ee;
   --warning: #8d5f17;
+  --signal: #bf4b1f;
+  --signal-dark: #963715;
+  --signal-soft: #f8e7de;
   --shadow-card: 0 26px 70px rgba(22, 48, 37, 0.12);
   --shadow-button: 0 10px 24px rgba(13, 43, 33, 0.17);
   --radius-large: 28px;

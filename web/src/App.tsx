@@ -16,6 +16,12 @@ import { ApiError } from './api/api-client'
 import { TrackDashboard } from './track/TrackDashboard'
 import { SharedReportPage } from './sharing/SharedReportPage'
 import { readShareRoute } from './sharing/share-route'
+import { WorkspaceNavigation } from './workspace/WorkspaceNavigation'
+import {
+  readWorkspaceSection,
+  workspaceHash,
+  type WorkspaceSection,
+} from './workspace/workspace-route'
 
 type SessionState =
   | { status: 'loading' }
@@ -28,12 +34,22 @@ function App() {
   const [shareRoute, setShareRoute] = useState(
     () => readShareRoute(window.location.hash),
   )
+  const [workspaceSection, setWorkspaceSection] = useState(
+    () => readWorkspaceSection(window.location.hash),
+  )
+  const [reportVisible, setReportVisible] = useState(false)
   const [session, setSession] = useState<SessionState>({ status: 'loading' })
   const [bootstrapMessage, setBootstrapMessage] = useState<string | null>(null)
 
   useEffect(() => {
     function handleHashChange() {
-      setShareRoute(readShareRoute(window.location.hash))
+      const nextShareRoute = readShareRoute(window.location.hash)
+      setShareRoute(nextShareRoute)
+
+      if (!nextShareRoute.matched) {
+        setReportVisible(false)
+        setWorkspaceSection(readWorkspaceSection(window.location.hash))
+      }
     }
 
     window.addEventListener('hashchange', handleHashChange)
@@ -77,13 +93,39 @@ function App() {
     return <SharedReportPage token={shareRoute.token} />
   }
 
+  function navigateToWorkspace(section: WorkspaceSection) {
+    setReportVisible(false)
+    setWorkspaceSection(section)
+
+    const nextHash = workspaceHash(section)
+    if (window.location.hash !== nextHash) {
+      window.location.hash = nextHash
+    }
+  }
+
+  function handleLoggedOut() {
+    setSession({ status: 'guest' })
+    setReportVisible(false)
+    setWorkspaceSection('home')
+
+    window.history.replaceState(
+      null,
+      '',
+      `${window.location.pathname}${window.location.search}`,
+    )
+  }
+
   return (
     <div className="app-shell">
       <a className="skip-link" href="#main-content">
         Aller au contenu principal
       </a>
 
-      <Header session={session} />
+      <Header
+        session={session}
+        activeSection={workspaceSection}
+        onNavigate={navigateToWorkspace}
+      />
 
       <main id="main-content">
         {session.status === 'loading' && <LoadingScreen />}
@@ -94,6 +136,7 @@ function App() {
             onAuthenticated={(account) => {
               setBootstrapMessage(null)
               setSession({ status: 'authenticated', account })
+              navigateToWorkspace('home')
             }}
           />
         )}
@@ -101,33 +144,64 @@ function App() {
         {session.status === 'authenticated' && (
           <TrackDashboard
             account={session.account}
-            onLoggedOut={() => setSession({ status: 'guest' })}
+            section={workspaceSection}
+            reportVisible={reportVisible}
+            onNavigate={navigateToWorkspace}
+            onReportVisibilityChange={setReportVisible}
+            onLoggedOut={handleLoggedOut}
           />
         )}
       </main>
+
+      {session.status === 'authenticated' && (
+        <WorkspaceNavigation
+          className="workspace-mobile-navigation"
+          label="Navigation principale sur mobile"
+          activeSection={workspaceSection}
+          onNavigate={navigateToWorkspace}
+        />
+      )}
 
       <Footer />
     </div>
   )
 }
 
-function Header({ session }: { session: SessionState }) {
+function Header({
+  session,
+  activeSection,
+  onNavigate,
+}: {
+  session: SessionState
+  activeSection: WorkspaceSection
+  onNavigate: (section: WorkspaceSection) => void
+}) {
+  const authenticated = session.status === 'authenticated'
+
   return (
-    <header className="topbar">
-      <a className="brand" href="/" aria-label="Itinéclair, accueil">
+    <header className={`topbar${authenticated ? ' topbar-authenticated' : ''}`}>
+      <a
+        className="brand"
+        href={authenticated ? workspaceHash('home') : '/'}
+        onClick={() => {
+          if (authenticated) {
+            onNavigate('home')
+          }
+        }}
+        aria-label="Itinéclair, accueil"
+      >
         <BrandMark />
         <span>Itinéclair</span>
       </a>
 
-      <p className="topbar-tagline">Préparer. Comprendre. Décider.</p>
-
-      {session.status === 'authenticated' && (
-        <div className="account-chip" title={session.account.email}>
-          <span className="account-avatar" aria-hidden="true">
-            {session.account.email.slice(0, 1).toUpperCase()}
-          </span>
-          <span className="account-email">{session.account.email}</span>
-        </div>
+      {authenticated ? (
+        <WorkspaceNavigation
+          className="workspace-desktop-navigation"
+          activeSection={activeSection}
+          onNavigate={onNavigate}
+        />
+      ) : (
+        <p className="topbar-tagline">Préparer. Comprendre. Décider.</p>
       )}
     </header>
   )
