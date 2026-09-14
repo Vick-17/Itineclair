@@ -9,10 +9,10 @@ import {
 
 import { ApiError } from '../api/api-client'
 import type { Account } from '../auth/auth-api'
+import { PreparationFlow } from '../preparation/PreparationFlow'
 import { WorkspaceAccount } from '../workspace/WorkspaceAccount'
 import { WorkspaceHome } from '../workspace/WorkspaceHome'
 import type { WorkspaceSection } from '../workspace/workspace-route'
-import { TrackReport } from './TrackReport'
 import {
   formatCoverage,
   formatDistance,
@@ -155,9 +155,9 @@ export function TrackDashboard({
     try {
       const imported = await importTrack(selectedFile)
       setTracks((currentTracks) => [imported, ...currentTracks])
-      setSuccessMessage(`« ${imported.name} » a bien été ajoutée.`)
       setSelectedFile(null)
       resetInput()
+      await handleOpenReport(imported.id)
     } catch (error: unknown) {
       if (error instanceof ApiError && error.status === 401) {
         onLoggedOut()
@@ -219,7 +219,8 @@ export function TrackDashboard({
 
   if (reportVisible && reportTrack && reportAnalysis) {
     return (
-      <TrackReport
+      <PreparationFlow
+        key={reportTrack.id}
         track={reportTrack}
         outdoorContext={reportOutdoorContext}
         analysis={reportAnalysis}
