@@ -1,9 +1,3 @@
-import {
-  useState,
-  type FormEvent,
-} from 'react'
-
-import { ApiError } from '../api/api-client'
 import { TrackAnalysisPanel } from './TrackAnalysisPanel'
 import { TrackFeedbackPanel } from './TrackFeedbackPanel'
 import { TrackSharePanel } from '../sharing/TrackSharePanel'
@@ -15,8 +9,6 @@ import {
   formatMeters,
 } from './track-format'
 import {
-  getTrackAnalysis,
-  saveOutdoorContext,
   type OutdoorContext,
   type Track,
   type TrackAnalysis,
@@ -27,89 +19,25 @@ export function TrackReport({
   track,
   outdoorContext,
   analysis,
-  onOutdoorContextChange,
-  onAnalysisChange,
+  onEditDeparture,
   onUnauthorized,
   onBack,
 }: {
   track: Track
   outdoorContext: OutdoorContext | null
   analysis: TrackAnalysis
-  onOutdoorContextChange: (context: OutdoorContext) => void
-  onAnalysisChange: (analysis: TrackAnalysis) => void
+  onEditDeparture: () => void
   onUnauthorized: () => void
   onBack: () => void
 }) {
   const facts = track.facts
-  const [plannedStartLocal, setPlannedStartLocal] = useState(
-    outdoorContext?.plannedStartLocal.slice(0, 16) ?? defaultPlannedStart(),
-  )
-  const [plannedDurationMinutes, setPlannedDurationMinutes] = useState(
-    outdoorContext?.plannedDurationMinutes ?? 360,
-  )
-  const [timeZone, setTimeZone] = useState(
-    outdoorContext?.timeZone ?? browserTimeZone(),
-  )
-  const [weatherConsent, setWeatherConsent] = useState(
-    outdoorContext !== null
-      && outdoorContext.weather.status !== 'NOT_REQUESTED',
-  )
-  const [savingContext, setSavingContext] = useState(false)
-  const [contextError, setContextError] = useState<string | null>(null)
-  const [contextSuccess, setContextSuccess] = useState<string | null>(null)
-
-  async function handleContextSave(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setContextError(null)
-    setContextSuccess(null)
-    setSavingContext(true)
-
-    try {
-      const saved = await saveOutdoorContext(track.id, {
-        plannedStartLocal: normalizeLocalDateTime(plannedStartLocal),
-        plannedDurationMinutes,
-        timeZone: timeZone.trim(),
-        shareStartPointWithWeatherProvider: weatherConsent,
-      })
-
-      onOutdoorContextChange(saved)
-      const savedMessage =
-        weatherConsent
-          ? 'Horaire enregistré et prévision météo actualisée.'
-          : 'Horaire enregistré. Aucun point GPS n’a été transmis.'
-
-      try {
-        const refreshedAnalysis = await getTrackAnalysis(track.id)
-        onAnalysisChange(refreshedAnalysis)
-        setContextSuccess(savedMessage)
-      } catch (analysisError: unknown) {
-        if (analysisError instanceof ApiError && analysisError.status === 401) {
-          onUnauthorized()
-          return
-        }
-
-        setContextSuccess(
-          `${savedMessage} Recharge le rapport pour actualiser les règles.`,
-        )
-      }
-    } catch (error: unknown) {
-      if (error instanceof ApiError && error.status === 401) {
-        onUnauthorized()
-        return
-      }
-
-      setContextError(messageForContextError(error))
-    } finally {
-      setSavingContext(false)
-    }
-  }
 
   return (
-    <main className="track-report">
+    <article className="track-report">
       <nav className="report-navigation" aria-label="Navigation du rapport">
         <button type="button" onClick={onBack}>
           <span aria-hidden="true">←</span>
-          Mes traces
+          Mes sorties
         </button>
         <span>Rapport explicable · version 3</span>
       </nav>
@@ -189,105 +117,27 @@ export function TrackReport({
         <div className="outdoor-heading">
           <div>
             <p className="auth-kicker">Date, lumière et météo</p>
-            <h2 id="outdoor-title">Planifier cette sortie</h2>
+            <h2 id="outdoor-title">Départ prévu</h2>
           </div>
-          {outdoorContext && (
-            <span>
-              Contexte mis à jour le {formatCompactDate(outdoorContext.updatedAt)}
-            </span>
-          )}
+          <div className="outdoor-heading-actions">
+            {outdoorContext && (
+              <span>
+                Mis à jour le {formatCompactDate(outdoorContext.updatedAt)}
+              </span>
+            )}
+            <button type="button" onClick={onEditDeparture}>
+              Modifier le départ
+            </button>
+          </div>
         </div>
 
-        <form className="outdoor-form" onSubmit={handleContextSave}>
-          <div className="outdoor-form-grid">
-            <label>
-              <span>Départ local</span>
-              <input
-                type="datetime-local"
-                value={plannedStartLocal}
-                onChange={(event) => setPlannedStartLocal(event.target.value)}
-                required
-                disabled={savingContext}
-              />
-            </label>
-            <label>
-              <span>Durée prévue</span>
-              <select
-                value={plannedDurationMinutes}
-                onChange={(event) =>
-                  setPlannedDurationMinutes(Number(event.target.value))
-                }
-                disabled={savingContext}
-              >
-                <option value={120}>2 heures</option>
-                <option value={240}>4 heures</option>
-                <option value={360}>6 heures</option>
-                <option value={480}>8 heures</option>
-                <option value={600}>10 heures</option>
-                <option value={720}>12 heures</option>
-              </select>
-            </label>
-            <label>
-              <span>Fuseau du départ</span>
-              <input
-                type="text"
-                value={timeZone}
-                onChange={(event) => setTimeZone(event.target.value)}
-                placeholder="Europe/Paris"
-                maxLength={64}
-                required
-                autoComplete="off"
-                disabled={savingContext}
-              />
-              <small>Format IANA, par exemple Europe/Paris.</small>
-            </label>
-          </div>
-
-          <label className="weather-consent">
-            <input
-              type="checkbox"
-              checked={weatherConsent}
-              onChange={(event) => setWeatherConsent(event.target.checked)}
-              disabled={savingContext}
-            />
-            <span>
-              <strong>Obtenir la météo du point de départ</strong>
-              <small>
-                J’accepte l’envoi ponctuel de cette seule coordonnée à
-                Open‑Meteo. La décocher puis enregistrer retire le consentement
-                et efface la prévision conservée.
-              </small>
-            </span>
-          </label>
-
-          {contextError && (
-            <div className="form-alert" role="alert">
-              <span aria-hidden="true">!</span>
-              <p>{contextError}</p>
-            </div>
-          )}
-
-          {contextSuccess && (
-            <div className="success-alert" role="status">
-              <span aria-hidden="true">✓</span>
-              <p>{contextSuccess}</p>
-            </div>
-          )}
-
-          <button
-            className="primary-button outdoor-save"
-            type="submit"
-            disabled={savingContext}
-          >
-            {savingContext && (
-              <span className="button-spinner" aria-hidden="true" />
-            )}
-            {savingContext ? 'Calcul en cours…' : 'Enregistrer et recalculer'}
-          </button>
-        </form>
-
-        {outdoorContext && (
+        {outdoorContext ? (
           <OutdoorResults context={outdoorContext} />
+        ) : (
+          <div className="report-unavailable" role="status">
+            <strong>Départ non renseigné</strong>
+            <p>Ajoute une date et une durée pour calculer la lumière.</p>
+          </div>
         )}
       </section>
 
@@ -313,7 +163,7 @@ export function TrackReport({
           sécurité.
         </p>
       </section>
-    </main>
+    </article>
   )
 }
 
@@ -603,32 +453,4 @@ function formatPrecipitation(weather: WeatherContext): string {
   return probability === null
     ? amount
     : `${amount} · ${probability} % max`
-}
-
-function browserTimeZone(): string {
-  return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Paris'
-}
-
-function defaultPlannedStart(): string {
-  const date = new Date()
-  date.setDate(date.getDate() + 1)
-  date.setHours(8, 0, 0, 0)
-
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-
-  return `${year}-${month}-${day}T08:00`
-}
-
-function normalizeLocalDateTime(value: string): string {
-  return value.length === 16 ? `${value}:00` : value
-}
-
-function messageForContextError(error: unknown): string {
-  if (error instanceof ApiError) {
-    return error.message
-  }
-
-  return 'Le contexte n’a pas pu être enregistré. Vérifie ta connexion puis réessaie.'
 }
