@@ -1,12 +1,14 @@
 # Checklist de sortie du MVP
 
-Dernière revue : 2026-09-09.
+Dernière revue : 2026-09-15.
 
 ## 1. Preuve logicielle
 
 - [ ] la pull request vise `main` et `git diff --check` est vide ;
 - [ ] les tests Maven passent ;
 - [ ] `npm ci`, le lint, les tests et le build passent ;
+- [ ] `npm run test:usability` passe contre la stack de production : clavier,
+      structure accessible, parcours débutant et redistribution à 320 px ;
 - [ ] `Production — smoke test` valide toute la stack ;
 - [ ] aucun secret, `.env.production`, backup ou donnée réelle n’est commité ;
 - [ ] les PR Dependabot sont examinées ;
@@ -26,7 +28,21 @@ Dernière revue : 2026-09-09.
 - [ ] exporter et ouvrir l’archive ZIP ;
 - [ ] supprimer le compte et confirmer la disparition de la session.
 
-## 3. Vie privée et sécurité
+## 3. Utilisabilité et accessibilité
+
+- [ ] le protocole manuel de `docs/frontend-usability.md` est exécuté sans
+      souris sur ordinateur ;
+- [ ] le même protocole est exécuté avec NVDA ou VoiceOver, puis avec TalkBack
+      ou VoiceOver sur téléphone ;
+- [ ] à 320 px de large et à 400 % de zoom, aucune tâche essentielle ne demande
+      un défilement horizontal ;
+- [ ] une personne qui ne connaît pas Itinéclair prépare une sortie depuis un
+      GPX sans consigne orale et sait expliquer ce que le rapport ne garantit
+      pas ;
+- [ ] les anomalies, le navigateur, l’aide technique et la date du test sont
+      consignés avant décision de diffusion.
+
+## 4. Vie privée et sécurité
 
 - [ ] le secret de partage reste uniquement dans le fragment `#` ;
 - [ ] le rapport public ne contient ni identité, fichier, coordonnées, GPX,
@@ -37,7 +53,7 @@ Dernière revue : 2026-09-09.
 - [ ] les mentions de confidentialité sont complètes ;
 - [ ] une personne est responsable des demandes d’accès et de suppression.
 
-## 4. Exploitation
+## 5. Exploitation
 
 - [ ] HTTPS et le renouvellement du certificat sont testés ;
 - [ ] HSTS est ajouté par le frontal TLS ;
@@ -48,7 +64,7 @@ Dernière revue : 2026-09-09.
 - [ ] la procédure de mise à jour est documentée ;
 - [ ] un responsable et un contact d’incident existent.
 
-## 5. Sécurité physique
+## 6. Sécurité physique
 
 - [ ] aucun écran ne parle de parcours « sûr » ou d’autorisation de partir ;
 - [ ] les limites restent visibles ;
@@ -57,7 +73,7 @@ Dernière revue : 2026-09-09.
       officielles, fraîches et attribuées ;
 - [ ] une règle ou source douteuse peut être retirée immédiatement.
 
-## 6. Décision
+## 7. Décision
 
 ### Démonstration locale
 
@@ -66,7 +82,7 @@ explicitement consenties.
 
 ### Bêta privée encadrée
 
-Possible lorsque les sections 1 à 4 sont cochées et que les participants
+Possible lorsque les sections 1 à 5 sont cochées et que les participants
 connaissent le statut prototype.
 
 ### Bêta publique
@@ -74,7 +90,7 @@ connaissent le statut prototype.
 Interdite tant que toutes les sections ne sont pas cochées. Les risques
 `PHY-002` et `PHY-005` restent bloquants.
 
-## 7. Procès-verbal
+## 8. Procès-verbal
 
 ```text
 Version / commit :

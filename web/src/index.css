@@ -45,6 +45,7 @@
 html {
   min-width: 320px;
   min-height: 100%;
+  scroll-padding-block: 16px 80px;
   scroll-behavior: smooth;
 }
 
@@ -95,8 +96,9 @@ svg {
 }
 
 :focus-visible {
-  outline: 3px solid var(--lichen-strong);
-  outline-offset: 3px;
+  outline: 3px solid var(--white);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 5px var(--forest-950);
 }
 
 @media (prefers-reduced-motion: reduce) {

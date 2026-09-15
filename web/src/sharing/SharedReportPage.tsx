@@ -45,6 +45,12 @@ export function SharedReportPage({ token }: { token: string | null }) {
     }
   }, [token])
 
+  useEffect(() => {
+    document.title = state.status === 'error'
+      ? 'Partage indisponible — Itinéclair'
+      : 'Rapport partagé — Itinéclair'
+  }, [state.status])
+
   return (
     <div className="app-shell public-share-shell">
       <a className="skip-link" href="#shared-main">
@@ -58,7 +64,7 @@ export function SharedReportPage({ token }: { token: string | null }) {
         <p className="topbar-tagline">Lien privé · lecture seule</p>
       </header>
 
-      <main id="shared-main">
+      <main id="shared-main" tabIndex={-1}>
         {state.status === 'loading' && (
           <section className="loading-screen" aria-live="polite">
             <span className="loading-mark" aria-hidden="true" />

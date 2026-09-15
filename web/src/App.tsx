@@ -1,8 +1,10 @@
 import {
   useEffect,
   useId,
+  useRef,
   useState,
   type FormEvent,
+  type KeyboardEvent,
 } from 'react'
 
 import './App.css'
@@ -89,6 +91,21 @@ function App() {
     }
   }, [shareRoute.matched])
 
+  useEffect(() => {
+    if (shareRoute.matched || reportVisible) {
+      return
+    }
+
+    if (session.status === 'authenticated') {
+      document.title = `${workspaceTitle(workspaceSection)} — Itinéclair`
+      return
+    }
+
+    document.title = session.status === 'loading'
+      ? 'Chargement — Itinéclair'
+      : 'Se connecter ou créer un compte — Itinéclair'
+  }, [reportVisible, session.status, shareRoute.matched, workspaceSection])
+
   if (shareRoute.matched) {
     return <SharedReportPage token={shareRoute.token} />
   }
@@ -127,7 +144,7 @@ function App() {
         onNavigate={navigateToWorkspace}
       />
 
-      <main id="main-content">
+      <main id="main-content" tabIndex={-1}>
         {session.status === 'loading' && <LoadingScreen />}
 
         {session.status === 'guest' && (
@@ -235,6 +252,37 @@ function GuestLanding({
   onAuthenticated: (account: Account) => void
 }) {
   const [mode, setMode] = useState<AuthMode>('login')
+  const tabsId = useId()
+  const loginTabRef = useRef<HTMLButtonElement>(null)
+  const registerTabRef = useRef<HTMLButtonElement>(null)
+  const loginTabId = `${tabsId}-login-tab`
+  const registerTabId = `${tabsId}-register-tab`
+  const panelId = `${tabsId}-panel`
+
+  function handleTabKeyDown(
+    event: KeyboardEvent<HTMLButtonElement>,
+    currentMode: AuthMode,
+  ) {
+    let nextMode: AuthMode | null = null
+
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+      nextMode = currentMode === 'login' ? 'register' : 'login'
+    } else if (event.key === 'Home') {
+      nextMode = 'login'
+    } else if (event.key === 'End') {
+      nextMode = 'register'
+    }
+
+    if (!nextMode) {
+      return
+    }
+
+    event.preventDefault()
+    setMode(nextMode)
+
+    const nextTab = nextMode === 'login' ? loginTabRef : registerTabRef
+    nextTab.current?.focus()
+  }
 
   return (
     <div className="guest-layout">
@@ -303,18 +351,28 @@ function GuestLanding({
 
         <div className="auth-tabs" role="tablist" aria-label="Accès au compte">
           <button
+            ref={loginTabRef}
+            id={loginTabId}
             type="button"
             role="tab"
             aria-selected={mode === 'login'}
+            aria-controls={panelId}
+            tabIndex={mode === 'login' ? 0 : -1}
             onClick={() => setMode('login')}
+            onKeyDown={(event) => handleTabKeyDown(event, 'login')}
           >
             Se connecter
           </button>
           <button
+            ref={registerTabRef}
+            id={registerTabId}
             type="button"
             role="tab"
             aria-selected={mode === 'register'}
+            aria-controls={panelId}
+            tabIndex={mode === 'register' ? 0 : -1}
             onClick={() => setMode('register')}
+            onKeyDown={(event) => handleTabKeyDown(event, 'register')}
           >
             Créer un compte
           </button>
@@ -326,11 +384,17 @@ function GuestLanding({
           </div>
         )}
 
-        <AuthForm
-          key={mode}
-          mode={mode}
-          onAuthenticated={onAuthenticated}
-        />
+        <div
+          id={panelId}
+          role="tabpanel"
+          aria-labelledby={mode === 'login' ? loginTabId : registerTabId}
+        >
+          <AuthForm
+            key={mode}
+            mode={mode}
+            onAuthenticated={onAuthenticated}
+          />
+        </div>
       </section>
     </div>
   )
@@ -584,6 +648,17 @@ function formatDuration(seconds: number): string {
 
   const minutes = Math.ceil(seconds / 60)
   return `${minutes} minute${minutes > 1 ? 's' : ''}`
+}
+
+function workspaceTitle(section: WorkspaceSection): string {
+  switch (section) {
+    case 'outings':
+      return 'Mes sorties'
+    case 'account':
+      return 'Mon compte'
+    default:
+      return 'Accueil'
+  }
 }
 
 export default App

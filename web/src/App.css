@@ -117,6 +117,11 @@
   flex: 1;
 }
 
+#main-content:focus,
+#shared-main:focus {
+  outline-offset: -3px;
+}
+
 .guest-layout {
   width: min(1120px, calc(100% - 48px));
   margin: 0 auto;
