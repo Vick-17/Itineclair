@@ -1412,7 +1412,7 @@
 }
 
 .outdoor-result-metrics span {
-  color: var(--ink-muted);
+  color: var(--ink);
   font-size: 0.55rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -1469,7 +1469,7 @@
 }
 
 .weather-status-not_requested {
-  color: var(--ink-muted);
+  color: var(--ink);
   background: #eef0eb;
 }
 
