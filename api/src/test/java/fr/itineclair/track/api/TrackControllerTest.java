@@ -28,6 +28,9 @@ import fr.itineclair.security.SessionAuthenticationService;
 import fr.itineclair.track.InvalidGpxException;
 import fr.itineclair.track.TrackFacts;
 import fr.itineclair.track.TrackImportService;
+import fr.itineclair.track.TrackListEntry;
+import fr.itineclair.track.TrackListService;
+import fr.itineclair.track.TrackListStatus;
 import fr.itineclair.track.TrackNotFoundException;
 import fr.itineclair.track.TrackSummary;
 
@@ -63,6 +66,9 @@ class TrackControllerTest {
 
     @MockitoBean
     private TrackImportService trackImportService;
+
+    @MockitoBean
+    private TrackListService trackListService;
 
     @MockitoBean
     private AccountRegistrationService accountRegistrationService;
@@ -114,8 +120,10 @@ class TrackControllerTest {
 
     @Test
     void listsOnlyCurrentAccountTracks() throws Exception {
-        given(trackImportService.listTracks(ACCOUNT_ID))
-                .willReturn(List.of(summary()));
+        given(trackListService.listTracks(ACCOUNT_ID))
+                .willReturn(List.of(new TrackListEntry(
+                        summary(),
+                        TrackListStatus.DEPARTURE_TO_PLAN)));
 
         mockMvc.perform(get("/tracks")
                         .with(authentication(accountAuthentication())))
@@ -123,7 +131,9 @@ class TrackControllerTest {
                 .andExpect(jsonPath("$[0].id")
                         .value(TRACK_ID.toString()))
                 .andExpect(jsonPath("$[0].sourceFilename")
-                        .value("tour-du-lac.gpx"));
+                        .value("tour-du-lac.gpx"))
+                .andExpect(jsonPath("$[0].preparationStatus")
+                        .value("DEPARTURE_TO_PLAN"));
     }
 
     @Test

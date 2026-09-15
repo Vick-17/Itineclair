@@ -17,6 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import fr.itineclair.identity.AccountPrincipal;
 import fr.itineclair.track.TrackImportService;
+import fr.itineclair.track.TrackListService;
 import fr.itineclair.track.TrackSummary;
 
 @RestController
@@ -24,19 +25,22 @@ import fr.itineclair.track.TrackSummary;
 public class TrackController {
 
     private final TrackImportService trackImportService;
+    private final TrackListService trackListService;
 
     public TrackController(
-            TrackImportService trackImportService) {
+            TrackImportService trackImportService,
+            TrackListService trackListService) {
         this.trackImportService = trackImportService;
+        this.trackListService = trackListService;
     }
 
     @GetMapping
-    public List<TrackResponse> list(
+    public List<TrackListItemResponse> list(
             @AuthenticationPrincipal AccountPrincipal principal) {
-        return trackImportService
+        return trackListService
                 .listTracks(principal.id())
                 .stream()
-                .map(TrackResponse::from)
+                .map(TrackListItemResponse::from)
                 .toList();
     }
 

@@ -29,7 +29,9 @@ import {
   type OutdoorContext,
   type Track,
   type TrackAnalysis,
+  type TrackListItem,
 } from './tracks-api'
+import { trackListStatusDetails } from './track-list-status'
 
 const MAXIMUM_FILE_SIZE_BYTES = 10 * 1024 * 1024
 
@@ -51,7 +53,7 @@ export function TrackDashboard({
   const inputId = useId()
   const inputRef = useRef<HTMLInputElement>(null)
   const activeSectionRef = useRef(section)
-  const [tracks, setTracks] = useState<Track[]>([])
+  const [tracks, setTracks] = useState<TrackListItem[]>([])
   const [reportTrack, setReportTrack] = useState<Track | null>(null)
   const [reportOutdoorContext, setReportOutdoorContext] =
     useState<OutdoorContext | null>(null)
@@ -154,7 +156,13 @@ export function TrackDashboard({
 
     try {
       const imported = await importTrack(selectedFile)
-      setTracks((currentTracks) => [imported, ...currentTracks])
+      setTracks((currentTracks) => [
+        {
+          ...imported,
+          preparationStatus: 'DEPARTURE_TO_PLAN',
+        },
+        ...currentTracks,
+      ])
       setSelectedFile(null)
       resetInput()
       await handleOpenReport(imported.id)
@@ -209,6 +217,20 @@ export function TrackDashboard({
     setReportAnalysis(null)
     onReportVisibilityChange(false)
     onNavigate(reportReturnSection)
+    void refreshTrackList()
+  }
+
+  async function refreshTrackList() {
+    try {
+      setTracks(await listTracks())
+    } catch (error: unknown) {
+      if (error instanceof ApiError && error.status === 401) {
+        onLoggedOut()
+        return
+      }
+
+      setErrorMessage(messageForError(error))
+    }
   }
 
   function resetInput() {
@@ -378,81 +400,107 @@ export function TrackDashboard({
 
             {tracks.length > 0 && (
               <ul className="track-grid">
-                {tracks.map((track) => (
-                  <li key={track.id}>
-                    <article className="track-card">
-                      <div className="track-card-top">
-                        <span className="track-symbol" aria-hidden="true">
-                          ⌁
-                        </span>
-                        <time dateTime={track.createdAt}>
-                          {formatDate(track.createdAt)}
-                        </time>
-                      </div>
+                {tracks.map((track) => {
+                  const status = trackListStatusDetails(
+                    track.preparationStatus,
+                  )
+                  const statusId = `track-${track.id}-status`
 
-                      <h3>{track.name}</h3>
-                      <p className="track-filename">{track.sourceFilename}</p>
-
-                      {track.facts ? (
-                        <>
-                          <dl>
-                            <div>
-                              <dt>Distance</dt>
-                              <dd>
-                                {formatDistance(track.facts.distanceMeters)}
-                              </dd>
-                            </div>
-                            <div>
-                              <dt>Montée</dt>
-                              <dd>
-                                {formatMeters(
-                                  track.facts.elevationGainMeters,
-                                )}
-                              </dd>
-                            </div>
-                            <div>
-                              <dt>Altitudes</dt>
-                              <dd>{formatElevationRange(track.facts)}</dd>
-                            </div>
-                            <div>
-                              <dt
-                                title={`Pentes calculées sur au moins ${track.facts.gradeMinimumRunMeters} mètres`}
-                              >
-                                Pentes maximales
-                              </dt>
-                              <dd>{formatMaximumGrades(track.facts)}</dd>
-                            </div>
-                          </dl>
-
-                          <p className="track-coverage">
-                            {formatCoverage(track)}
-                          </p>
-                        </>
-                      ) : (
-                        <div className="track-facts-unavailable">
-                          <strong>Calcul en attente</strong>
-                          <span>
-                            Les faits seront calculés à la prochaine
-                            consultation.
+                  return (
+                    <li key={track.id}>
+                      <article className="track-card">
+                        <div className="track-card-top">
+                          <span className="track-symbol" aria-hidden="true">
+                            ⌁
                           </span>
+                          <time dateTime={track.createdAt}>
+                            {formatDate(track.createdAt)}
+                          </time>
                         </div>
-                      )}
 
-                      <button
-                        className="track-report-button"
-                        type="button"
-                        onClick={() => handleOpenReport(track.id)}
-                        disabled={openingTrackId !== null}
-                        aria-label={`Voir la préparation de ${track.name}`}
-                      >
-                        {openingTrackId === track.id
-                          ? 'Ouverture…'
-                          : 'Voir la préparation'}
-                        <span aria-hidden="true">→</span>
-                      </button>
-                    </article>
-                  </li>
-                ))}
+                        <h3>{track.name}</h3>
+                        <p className="track-filename">
+                          {track.sourceFilename}
+                        </p>
+
+                        {track.facts ? (
+                          <>
+                            <dl>
+                              <div>
+                                <dt>Distance</dt>
+                                <dd>
+                                  {formatDistance(track.facts.distanceMeters)}
+                                </dd>
+                              </div>
+                              <div>
+                                <dt>Montée</dt>
+                                <dd>
+                                  {formatMeters(
+                                    track.facts.elevationGainMeters,
+                                  )}
+                                </dd>
+                              </div>
+                              <div>
+                                <dt>Altitudes</dt>
+                                <dd>{formatElevationRange(track.facts)}</dd>
+                              </div>
+                              <div>
+                                <dt
+                                  title={`Pentes calculées sur au moins ${track.facts.gradeMinimumRunMeters} mètres`}
+                                >
+                                  Pentes maximales
+                                </dt>
+                                <dd>{formatMaximumGrades(track.facts)}</dd>
+                              </div>
+                            </dl>
+
+                            <p className="track-coverage">
+                              {formatCoverage(track)}
+                            </p>
+                          </>
+                        ) : (
+                          <div className="track-facts-unavailable">
+                            <strong>Calcul en attente</strong>
+                            <span>
+                              Les faits seront calculés à la prochaine
+                              consultation.
+                            </span>
+                          </div>
+                        )}
+
+                        <div
+                          className={`track-list-status track-list-status-${status.tone}`}
+                          id={statusId}
+                        >
+                          <span
+                            className="track-list-status-symbol"
+                            aria-hidden="true"
+                          >
+                            {status.symbol}
+                          </span>
+                          <div>
+                            <strong>{status.label}</strong>
+                            <p>{status.description}</p>
+                          </div>
+                        </div>
+
+                        <button
+                          className="track-report-button"
+                          type="button"
+                          onClick={() => handleOpenReport(track.id)}
+                          disabled={openingTrackId !== null}
+                          aria-describedby={statusId}
+                          aria-label={`${status.actionLabel} : ${track.name}`}
+                        >
+                          {openingTrackId === track.id
+                            ? 'Ouverture…'
+                            : status.actionLabel}
+                          <span aria-hidden="true">→</span>
+                        </button>
+                      </article>
+                    </li>
+                  )
+                })}
               </ul>
             )}
           </section>

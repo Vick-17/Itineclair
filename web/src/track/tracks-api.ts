@@ -28,6 +28,17 @@ export type Track = {
   createdAt: string
 }
 
+export type TrackListStatus =
+  | 'ANALYSIS_PENDING'
+  | 'DEPARTURE_TO_PLAN'
+  | 'PREPARATION_TO_REVIEW'
+  | 'FEEDBACK_TO_RECORD'
+  | 'FEEDBACK_RECORDED'
+
+export type TrackListItem = Track & {
+  preparationStatus: TrackListStatus
+}
+
 export type DaylightCondition =
   | 'NORMAL'
   | 'SUN_ALWAYS_UP'
@@ -212,8 +223,8 @@ export type TrackAnalysis = {
   limitations: string[]
 }
 
-export async function listTracks(): Promise<Track[]> {
-  return getJson<Track[]>('/tracks')
+export async function listTracks(): Promise<TrackListItem[]> {
+  return getJson<TrackListItem[]>('/tracks')
 }
 
 export async function getTrack(trackId: string): Promise<Track> {

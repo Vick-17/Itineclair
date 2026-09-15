@@ -2794,11 +2794,15 @@
   min-height: 0;
   padding: 21px 0;
   display: grid;
-  grid-template-columns: minmax(190px, 0.9fr) minmax(300px, 1.2fr) auto;
+  grid-template-columns:
+    minmax(180px, 0.75fr)
+    minmax(220px, 0.85fr)
+    minmax(260px, 1.1fr)
+    auto;
   grid-template-areas:
-    "top facts action"
-    "title facts action"
-    "filename coverage action";
+    "top status facts action"
+    "title status facts action"
+    "filename status coverage action";
   align-items: center;
   column-gap: 28px;
   border: 0;
@@ -2830,6 +2834,72 @@
 .workspace-outings .track-coverage,
 .workspace-outings .track-facts-unavailable {
   grid-area: coverage;
+}
+
+.track-list-status {
+  grid-area: status;
+  min-height: 94px;
+  padding: 14px 16px;
+  display: grid;
+  grid-template-columns: 29px minmax(0, 1fr);
+  align-content: center;
+  gap: 11px;
+  border-left: 3px solid var(--forest-800);
+  color: var(--ink-muted);
+  background: var(--forest-50);
+}
+
+.track-list-status-symbol {
+  width: 27px;
+  height: 27px;
+  display: grid;
+  place-items: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  color: var(--forest-800);
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
+.track-list-status strong {
+  display: block;
+  color: var(--ink-strong);
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+.track-list-status p {
+  margin: 5px 0 0;
+  font-size: 0.67rem;
+  line-height: 1.5;
+}
+
+.track-list-status-attention {
+  border-left-color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.track-list-status-attention .track-list-status-symbol {
+  color: var(--danger);
+}
+
+.track-list-status-review {
+  border-left-color: var(--signal);
+  background: rgba(236, 241, 224, 0.56);
+}
+
+.track-list-status-follow-up {
+  border-left-color: var(--warning);
+  background: #fff9e8;
+}
+
+.track-list-status-follow-up .track-list-status-symbol {
+  color: var(--warning);
+}
+
+.track-list-status-complete {
+  border-left-color: var(--forest-500);
+  background: rgba(236, 241, 224, 0.4);
 }
 
 .workspace-outings .track-report-button {
@@ -2881,12 +2951,20 @@
 
 @media (max-width: 900px) {
   .workspace-outings .track-card {
-    grid-template-columns: minmax(180px, 0.8fr) minmax(280px, 1.2fr);
+    grid-template-columns: minmax(180px, 0.8fr) minmax(260px, 1.2fr);
     grid-template-areas:
-      "top facts"
-      "title facts"
-      "filename coverage"
+      "top status"
+      "title status"
+      "filename status"
+      "facts facts"
+      "coverage coverage"
       "action action";
+  }
+
+  .workspace-outings .track-card dl {
+    margin-top: 18px;
+    padding-top: 15px;
+    border-top: 1px solid var(--line);
   }
 
   .workspace-outings .track-report-button {
@@ -2998,9 +3076,15 @@
       "top"
       "title"
       "filename"
+      "status"
       "facts"
       "coverage"
       "action";
+  }
+
+  .track-list-status {
+    min-height: 0;
+    margin-top: 18px;
   }
 
   .workspace-outings .track-card dl {
