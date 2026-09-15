@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "test": "node --test tests/*.test.mjs",
+    "test:usability": "playwright test",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -16,7 +17,9 @@
   },
   "devDependencies": {
     "@babel/core": "^7.29.7",
+    "@axe-core/playwright": "4.13.0",
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "1.63.0",
     "@rolldown/plugin-babel": "^0.2.3",
     "@types/babel__core": "^7.20.5",
     "@types/node": "^24.13.3",

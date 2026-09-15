@@ -95,6 +95,14 @@ jobs:
         with:
           node-version: "24"
 
+      - name: Installer les dépendances des tests navigateur
+        working-directory: web
+        run: npm ci
+
+      - name: Installer Chromium
+        working-directory: web
+        run: npx playwright install --with-deps chromium
+
       - name: Valider la configuration de production
         run: docker compose --file compose.prod.yaml config --quiet
 
@@ -108,6 +116,23 @@ jobs:
 
       - name: Tester le parcours MVP complet
         run: node scripts/mvp-smoke.mjs http://127.0.0.1:18080/api
+
+      - name: Tester l’utilisabilité du frontal
+        working-directory: web
+        env:
+          ITINECLAIR_E2E_BASE_URL: http://localhost:18080
+        run: npm run test:usability
+
+      - name: Conserver les preuves en cas d’échec navigateur
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: frontend-usability-results
+          path: |
+            web/playwright-report
+            web/test-results
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Afficher les journaux en cas d’échec
         if: failure()
