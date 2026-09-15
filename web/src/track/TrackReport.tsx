@@ -1,5 +1,6 @@
 import { TrackAnalysisPanel } from './TrackAnalysisPanel'
 import { TrackFeedbackPanel } from './TrackFeedbackPanel'
+import { ReportOverview } from './ReportOverview'
 import { TrackSharePanel } from '../sharing/TrackSharePanel'
 import {
   formatCoverage,
@@ -39,14 +40,14 @@ export function TrackReport({
           <span aria-hidden="true">←</span>
           Mes sorties
         </button>
-        <span>Rapport explicable · version 3</span>
+        <span>Préparation explicable · version 3</span>
       </nav>
 
       <header className="report-heading">
         <div>
           <p className="eyebrow">
             <span aria-hidden="true">●</span>
-            Analyse prudente
+            Préparation de sortie
           </p>
           <h1>{track.name}</h1>
           <p>{track.sourceFilename} · {formatCoverage(track)}</p>
@@ -56,68 +57,27 @@ export function TrackReport({
         </time>
       </header>
 
-      <aside className="report-caution" aria-label="Limite du rapport">
-        <span aria-hidden="true">i</span>
-        <div>
-          <strong>Des faits de préparation, jamais un feu vert.</strong>
-          <p>
-            La trace, la lumière et une prévision ponctuelle ne suffisent pas
-            à déclarer une sortie sûre. Vérifie toujours les bulletins locaux,
-            le terrain, les alertes et les capacités réelles du groupe.
-          </p>
-        </div>
-      </aside>
+      <ReportOverview
+        analysis={analysis}
+        idPrefix="owner"
+        analysisTitleId="owner-analysis-title"
+        caution="Vérifie les bulletins locaux, les alertes, l’état du terrain et les capacités réelles du groupe."
+      />
 
-      {facts ? (
-        <section className="report-metrics" aria-label="Faits principaux">
-          <ReportMetric
-            label="Distance"
-            value={formatDistance(facts.distanceMeters)}
-            detail="Somme WGS84, segments séparés"
-          />
-          <ReportMetric
-            label="Dénivelé positif"
-            value={formatMeters(facts.elevationGainMeters)}
-            detail={track.elevationComplete ? 'Altitude complète' : 'Valeur partielle'}
-          />
-          <ReportMetric
-            label="Dénivelé négatif"
-            value={formatMeters(facts.elevationLossMeters)}
-            detail={track.elevationComplete ? 'Altitude complète' : 'Valeur partielle'}
-          />
-          <ReportMetric
-            label="Plage d’altitude"
-            value={formatElevationRange(facts)}
-            detail="Minimum–maximum du GPX"
-          />
-          <ReportMetric
-            label="Pente montante max"
-            value={formatGrade(facts.maximumUphillGradePercent, '+')}
-            detail={`Fenêtre ≥ ${facts.gradeMinimumRunMeters} m`}
-          />
-          <ReportMetric
-            label="Pente descendante max"
-            value={formatGrade(facts.maximumDownhillGradePercent, '−')}
-            detail={`Fenêtre ≥ ${facts.gradeMinimumRunMeters} m`}
-          />
-        </section>
-      ) : (
-        <section className="report-unavailable" role="status">
-          <strong>Calcul des faits en attente</strong>
-          <p>Recharge la bibliothèque pour relancer l’analyse de cette trace.</p>
-        </section>
-      )}
-
-      <TrackFeedbackPanel
-        trackId={track.id}
-        onUnauthorized={onUnauthorized}
+      <TrackAnalysisPanel
+        analysis={analysis}
+        idPrefix="owner-analysis"
       />
 
       <section className="outdoor-context" aria-labelledby="outdoor-title">
         <div className="outdoor-heading">
           <div>
-            <p className="auth-kicker">Date, lumière et météo</p>
-            <h2 id="outdoor-title">Départ prévu</h2>
+            <p className="auth-kicker">Conditions liées à l’horaire</p>
+            <h2 id="outdoor-title">Départ, lumière et météo</h2>
+            <p>
+              Ces informations décrivent le point de départ et la durée
+              prévue, pas l’ensemble du parcours.
+            </p>
           </div>
           <div className="outdoor-heading-actions">
             {outdoorContext && (
@@ -141,28 +101,86 @@ export function TrackReport({
         )}
       </section>
 
-      <TrackAnalysisPanel analysis={analysis} />
+      <section className="report-route" aria-labelledby="report-route-title">
+        <div className="report-section-heading">
+          <p className="auth-kicker">Repères du parcours</p>
+          <h2 id="report-route-title">La trace en chiffres</h2>
+          <p>
+            Ces valeurs viennent uniquement du fichier GPX importé. Compare-les
+            avec la source originale du parcours.
+          </p>
+        </div>
+
+        {facts ? (
+          <dl className="report-metrics">
+            <ReportMetric
+              label="Distance"
+              value={formatDistance(facts.distanceMeters)}
+              detail="Calculée entre les points du fichier"
+            />
+            <ReportMetric
+              label="Dénivelé positif"
+              value={formatMeters(facts.elevationGainMeters)}
+              detail={track.elevationComplete ? 'Altitude du GPX complète' : 'Valeur partielle'}
+            />
+            <ReportMetric
+              label="Dénivelé négatif"
+              value={formatMeters(facts.elevationLossMeters)}
+              detail={track.elevationComplete ? 'Altitude du GPX complète' : 'Valeur partielle'}
+            />
+            <ReportMetric
+              label="Plage d’altitude"
+              value={formatElevationRange(facts)}
+              detail="Point le plus bas → point le plus haut"
+            />
+            <ReportMetric
+              label="Pente montante maximale"
+              value={formatGrade(facts.maximumUphillGradePercent, '+')}
+              detail={`Mesurée sur au moins ${facts.gradeMinimumRunMeters} m`}
+            />
+            <ReportMetric
+              label="Pente descendante maximale"
+              value={formatGrade(facts.maximumDownhillGradePercent, '−')}
+              detail={`Mesurée sur au moins ${facts.gradeMinimumRunMeters} m`}
+            />
+          </dl>
+        ) : (
+          <div className="report-unavailable" role="status">
+            <strong>Calcul des faits en attente</strong>
+            <p>Recharge Mes sorties pour relancer l’analyse de cette trace.</p>
+          </div>
+        )}
+      </section>
+
+      <details className="report-method">
+        <summary>Comment Itinéclair calcule ces informations</summary>
+        <div className="report-method-content">
+          <p>
+            La distance est calculée entre les coordonnées du GPX en tenant
+            compte de la forme de la Terre. Les dénivelés utilisent uniquement
+            deux altitudes consécutives connues. La lumière est calculée au
+            premier point de la trace avec le fuseau choisi.
+          </p>
+          <p>
+            Avec ton consentement, les prévisions météo horaires sont agrégées
+            sur la durée prévue. Le moteur applique ensuite des seuils
+            versionnés et conserve chaque dimension séparée. Il ne calcule
+            aucun score de sécurité.
+          </p>
+        </div>
+      </details>
 
       <TrackSharePanel
         trackId={track.id}
         onUnauthorized={onUnauthorized}
       />
 
-      <section className="report-method">
-        <div>
-          <p className="auth-kicker">Méthode transparente</p>
-          <h2>Comment lire ces nombres</h2>
-        </div>
-        <p>
-          La distance suit l’ellipsoïde WGS84. Les dénivelés utilisent
-          uniquement deux altitudes consécutives connues. La lumière est
-          calculée localement au premier point du GPX avec le fuseau choisi.
-          Avec consentement, les valeurs météo horaires sont agrégées sur la
-          durée prévue. Le moteur applique ensuite des seuils versionnés et
-          affiche chaque preuve séparément ; il ne calcule aucun score de
-          sécurité.
-        </p>
-      </section>
+      <div className="report-after-outing">
+        <TrackFeedbackPanel
+          trackId={track.id}
+          onUnauthorized={onUnauthorized}
+        />
+      </div>
     </article>
   )
 }
@@ -278,11 +296,13 @@ function ReportMetric({
   detail: string
 }) {
   return (
-    <article>
-      <span>{label}</span>
-      <strong>{value}</strong>
-      <small>{detail}</small>
-    </article>
+    <div>
+      <dt>{label}</dt>
+      <dd>
+        <strong>{value}</strong>
+        <small>{detail}</small>
+      </dd>
+    </div>
   )
 }
 

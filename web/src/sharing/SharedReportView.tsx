@@ -1,4 +1,5 @@
 import { TrackAnalysisPanel } from '../track/TrackAnalysisPanel'
+import { ReportOverview } from '../track/ReportOverview'
 import {
   formatCoverage,
   formatDistance,
@@ -29,7 +30,7 @@ export function SharedReportView({
             <span aria-hidden="true">●</span>
             {preview ? 'Aperçu exact avant partage' : 'Rapport privé partagé'}
           </p>
-          <h1>Rapport d’itinéraire</h1>
+          <h1>Préparation d’itinéraire</h1>
           <p>{formatCoverage(report.track)}</p>
         </div>
         {report.expiresAt && (
@@ -39,61 +40,17 @@ export function SharedReportView({
         )}
       </header>
 
-      <aside className="report-caution" aria-label="Limite du rapport">
-        <span aria-hidden="true">i</span>
-        <div>
-          <strong>Des faits de préparation, jamais un feu vert.</strong>
-          <p>
-            Cette vue ne contient ni carte ni position précise. Elle ne
-            remplace pas les sources officielles, l’expérience et la décision
-            humaine sur le terrain.
-          </p>
-        </div>
-      </aside>
+      <ReportOverview
+        analysis={report.analysis}
+        idPrefix="shared"
+        analysisTitleId="shared-analysis-title"
+        caution="Cette vue ne remplace pas les sources officielles, l’expérience et la décision humaine sur le terrain."
+      />
 
-      {facts ? (
-        <section className="report-metrics" aria-label="Faits partagés">
-          <SharedMetric
-            label="Distance"
-            value={formatDistance(facts.distanceMeters)}
-            detail="Somme WGS84, segments séparés"
-          />
-          <SharedMetric
-            label="Dénivelé positif"
-            value={formatMeters(facts.elevationGainMeters)}
-            detail={report.track.elevationComplete
-              ? 'Altitude complète'
-              : 'Valeur partielle'}
-          />
-          <SharedMetric
-            label="Dénivelé négatif"
-            value={formatMeters(facts.elevationLossMeters)}
-            detail={report.track.elevationComplete
-              ? 'Altitude complète'
-              : 'Valeur partielle'}
-          />
-          <SharedMetric
-            label="Plage d’altitude"
-            value={formatElevationRange(facts)}
-            detail="Minimum–maximum du GPX"
-          />
-          <SharedMetric
-            label="Pente montante max"
-            value={formatGrade(facts.maximumUphillGradePercent, '+')}
-            detail={`Fenêtre ≥ ${facts.gradeMinimumRunMeters} m`}
-          />
-          <SharedMetric
-            label="Pente descendante max"
-            value={formatGrade(facts.maximumDownhillGradePercent, '−')}
-            detail={`Fenêtre ≥ ${facts.gradeMinimumRunMeters} m`}
-          />
-        </section>
-      ) : (
-        <section className="report-unavailable" role="status">
-          <strong>Faits non disponibles</strong>
-          <p>Le rapport partagé ne fabrique aucune valeur manquante.</p>
-        </section>
-      )}
+      <TrackAnalysisPanel
+        analysis={report.analysis}
+        idPrefix="shared-analysis"
+      />
 
       {report.outdoorContext ? (
         <section className="shared-outdoor" aria-labelledby="shared-outdoor-title">
@@ -106,13 +63,66 @@ export function SharedReportView({
           <SharedOutdoorResults context={report.outdoorContext} />
         </section>
       ) : (
-        <section className="report-unavailable" role="status">
+        <div className="report-unavailable" role="status">
           <strong>Aucun horaire planifié</strong>
           <p>La lumière et la météo ne sont donc pas interprétées.</p>
-        </section>
+        </div>
       )}
 
-      <TrackAnalysisPanel analysis={report.analysis} />
+      <section className="report-route" aria-labelledby="shared-route-title">
+        <div className="report-section-heading">
+          <p className="auth-kicker">Repères du parcours</p>
+          <h2 id="shared-route-title">La trace en chiffres</h2>
+          <p>
+            La position précise et la carte restent volontairement absentes de
+            cette vue partagée.
+          </p>
+        </div>
+
+        {facts ? (
+          <dl className="report-metrics">
+            <SharedMetric
+              label="Distance"
+              value={formatDistance(facts.distanceMeters)}
+              detail="Calculée entre les points du fichier"
+            />
+            <SharedMetric
+              label="Dénivelé positif"
+              value={formatMeters(facts.elevationGainMeters)}
+              detail={report.track.elevationComplete
+                ? 'Altitude du GPX complète'
+                : 'Valeur partielle'}
+            />
+            <SharedMetric
+              label="Dénivelé négatif"
+              value={formatMeters(facts.elevationLossMeters)}
+              detail={report.track.elevationComplete
+                ? 'Altitude du GPX complète'
+                : 'Valeur partielle'}
+            />
+            <SharedMetric
+              label="Plage d’altitude"
+              value={formatElevationRange(facts)}
+              detail="Point le plus bas → point le plus haut"
+            />
+            <SharedMetric
+              label="Pente montante maximale"
+              value={formatGrade(facts.maximumUphillGradePercent, '+')}
+              detail={`Mesurée sur au moins ${facts.gradeMinimumRunMeters} m`}
+            />
+            <SharedMetric
+              label="Pente descendante maximale"
+              value={formatGrade(facts.maximumDownhillGradePercent, '−')}
+              detail={`Mesurée sur au moins ${facts.gradeMinimumRunMeters} m`}
+            />
+          </dl>
+        ) : (
+          <div className="report-unavailable" role="status">
+            <strong>Faits non disponibles</strong>
+            <p>Le rapport partagé ne fabrique aucune valeur manquante.</p>
+          </div>
+        )}
+      </section>
 
       <section className="shared-privacy" aria-labelledby="shared-privacy-title">
         <p className="auth-kicker">Confidentialité</p>
@@ -251,11 +261,13 @@ function SharedMetric({
   detail: string
 }) {
   return (
-    <article>
-      <span>{label}</span>
-      <strong>{value}</strong>
-      <small>{detail}</small>
-    </article>
+    <div>
+      <dt>{label}</dt>
+      <dd>
+        <strong>{value}</strong>
+        <small>{detail}</small>
+      </dd>
+    </div>
   )
 }
 
