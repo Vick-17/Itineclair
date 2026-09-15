@@ -1381,7 +1381,7 @@
   letter-spacing: -0.025em;
 }
 
-.outdoor-result-heading > span {
+.outdoor-result-heading > span:not(.weather-status) {
   color: var(--ink-muted);
   font-size: 0.61rem;
   line-height: 1.45;
