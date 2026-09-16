@@ -27,7 +27,7 @@
 
     <properties>
         <java.version>25</java.version>
-        <springdoc.version>3.1.0</springdoc.version>
+        <springdoc.version>3.1.1</springdoc.version>
         <password4j.version>1.8.4</password4j.version>
         <geographiclib.version>2.1</geographiclib.version>
         <commons-suncalc.version>3.11</commons-suncalc.version>
