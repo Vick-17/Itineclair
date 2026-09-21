@@ -125,7 +125,7 @@ jobs:
 
       - name: Conserver les preuves en cas d’échec navigateur
         if: failure()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: frontend-usability-results
           path: |
